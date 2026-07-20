@@ -1,0 +1,18 @@
+{
+  "_comment": "Blacklist Alliance — Litigator Screening. Screens each lead against known serial TCPA litigators / professional plaintiffs. `status` = 'clean' | 'litigator' | 'suspected'. A litigator hit is a hard stop in most buyers' rules.",
+  "provider": "blacklist_alliance",
+  "results": {
+    "L-1001": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1002": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1003": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1004": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1005": { "status": "litigator", "match_score": 97, "sources": ["tcpa_complaint_db", "attorney_of_record_index"], "notes": "Phone tied to 14 filed TCPA complaints in the last 24 months." },
+    "L-1006": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1007": { "status": "clean", "match_score": 3, "sources": [] },
+    "L-1008": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1009": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1010": { "status": "clean", "match_score": 0, "sources": [] },
+    "L-1011": { "status": "suspected", "match_score": 58, "sources": ["pattern_watchlist"], "notes": "Name/phone loosely associated with a plaintiff pattern; not confirmed." },
+    "L-1012": { "status": "clean", "match_score": 0, "sources": [] }
+  }
+}

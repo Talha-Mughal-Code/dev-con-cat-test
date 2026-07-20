@@ -1,0 +1,16 @@
+{
+  "_comment": "Duplicate Detection & Tracking. This represents leads that ALREADY EXIST in each buyer/account's own CRM. Before a lead is accepted (and a buyer is charged), the Super Pixel must check it against the buyer's existing records so the same lead is not paid for twice. Match on phone and/or email within the SAME account_id. Records are grouped by account_id.",
+  "crm_records": {
+    "acct_solarpro": [
+      { "crm_id": "SP-40021", "first_name": "Alan", "last_name": "Reyes", "email": "alan.reyes@gmail.com", "phone": "+13105550111", "created_at": "2026-05-11T10:00:00Z" },
+      { "crm_id": "SP-40088", "first_name": "Maria", "last_name": "Gonzalez", "email": "maria.g.old@yahoo.com", "phone": "+13105550999", "created_at": "2026-06-02T12:30:00Z" }
+    ],
+    "acct_medicareedge": [
+      { "crm_id": "ME-88213", "first_name": "Patricia", "last_name": "Nguyen", "email": "patricia.nguyen@gmail.com", "phone": "+17135550173", "created_at": "2026-06-28T09:15:00Z", "_note": "This is the SAME person as lead L-1004 (matching phone AND email). L-1004 must be caught as a duplicate for acct_medicareedge before the buyer is charged again." },
+      { "crm_id": "ME-88410", "first_name": "Howard", "last_name": "Kim", "email": "howard.kim@gmail.com", "phone": "+17135550100", "created_at": "2026-07-01T14:45:00Z" }
+    ],
+    "acct_autoinsure": [
+      { "crm_id": "AI-55019", "first_name": "Emily", "last_name": "Watson", "email": "emily.watson.personal@gmail.com", "phone": "+16465550193", "created_at": "2026-07-19T22:05:00Z", "_note": "PARTIAL match to L-1012: same phone, DIFFERENT email, and created only ~3 hours before capture. Is this a duplicate or a returning customer? A good solution surfaces this as a soft/possible duplicate for human review rather than an auto-reject." }
+    ]
+  }
+}

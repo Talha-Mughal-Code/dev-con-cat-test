@@ -1,0 +1,18 @@
+{
+  "_comment": "Validation Providers — Phone Consensus. Three independent phone-validation providers run per lead. One provider is an opinion; agreement is a signal. Your engine should look for CONSENSUS across providers, not trust any single one. `line_type` = 'mobile' | 'landline' | 'voip' | 'unknown'. `valid` = provider believes the number is real and reachable.",
+  "provider": "phone_validation",
+  "results": {
+    "L-1001": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" } } },
+    "L-1002": { "providers": { "twilio_lookup": { "valid": false, "line_type": "unknown", "carrier": null }, "numverify": { "valid": false, "line_type": "unknown", "carrier": null }, "telesign": { "valid": true, "line_type": "voip", "carrier": "Bandwidth" } } },
+    "L-1003": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "AT&T" } } },
+    "L-1004": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "Verizon" } } },
+    "L-1005": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "AT&T" } } },
+    "L-1006": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "Verizon" } } },
+    "L-1007": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" }, "numverify": { "valid": false, "line_type": "unknown", "carrier": null }, "telesign": { "valid": true, "line_type": "voip", "carrier": "Google Voice" } } },
+    "L-1008": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "AT&T" } } },
+    "L-1009": { "providers": { "twilio_lookup": { "valid": true, "line_type": "voip", "carrier": "TextNow" }, "numverify": { "valid": true, "line_type": "voip", "carrier": "TextNow" }, "telesign": { "valid": true, "line_type": "voip", "carrier": "TextNow" } } },
+    "L-1010": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "T-Mobile" } } },
+    "L-1011": { "providers": { "twilio_lookup": { "valid": true, "line_type": "landline", "carrier": "AT&T" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "AT&T" }, "telesign": { "valid": true, "line_type": "landline", "carrier": "AT&T" } } },
+    "L-1012": { "providers": { "twilio_lookup": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "numverify": { "valid": true, "line_type": "mobile", "carrier": "Verizon" }, "telesign": { "valid": true, "line_type": "mobile", "carrier": "Verizon" } } }
+  }
+}

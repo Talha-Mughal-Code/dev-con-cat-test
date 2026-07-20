@@ -1,0 +1,60 @@
+{
+  "_comment": "Tenant accounts (buyers). Each account subscribes to a plan and spends CREDITS — one credit is consumed each time the Super Pixel runs a full verification on a lead (your engine may define this more precisely). The super-admin dashboard needs to show, per account: plan, credit balance, burn rate, and how close they are to running out. `enabled_modules` controls which provider layers that account pays for. Providers each have a per-check cost, so a fuller stack burns credits faster.",
+  "accounts": [
+    {
+      "account_id": "acct_solarpro",
+      "company_name": "SolarPro Leads LLC",
+      "plan": "growth",
+      "monthly_credit_allowance": 25000,
+      "credits_used_this_cycle": 21840,
+      "credits_remaining": 3160,
+      "cycle_start": "2026-07-01",
+      "cycle_end": "2026-07-31",
+      "status": "active",
+      "enabled_modules": ["anura", "trustedform", "dnc", "blacklist_alliance", "phone_validation", "email_validation", "vpn_proxy", "enrichment", "duplicate_detection"],
+      "avg_daily_burn": 1140,
+      "billing_contact": "ops@solarpro.example"
+    },
+    {
+      "account_id": "acct_medicareedge",
+      "company_name": "Medicare Edge Marketing",
+      "plan": "enterprise",
+      "monthly_credit_allowance": 120000,
+      "credits_used_this_cycle": 47210,
+      "credits_remaining": 72790,
+      "cycle_start": "2026-07-01",
+      "cycle_end": "2026-07-31",
+      "status": "active",
+      "enabled_modules": ["anura", "trustedform", "dnc", "blacklist_alliance", "phone_validation", "email_validation", "enrichment", "duplicate_detection", "voice"],
+      "avg_daily_burn": 2480,
+      "billing_contact": "compliance@medicareedge.example"
+    },
+    {
+      "account_id": "acct_autoinsure",
+      "company_name": "AutoInsure Direct",
+      "plan": "starter",
+      "monthly_credit_allowance": 8000,
+      "credits_used_this_cycle": 7920,
+      "credits_remaining": 80,
+      "cycle_start": "2026-07-01",
+      "cycle_end": "2026-07-31",
+      "status": "past_due",
+      "enabled_modules": ["anura", "trustedform", "dnc", "phone_validation", "duplicate_detection"],
+      "avg_daily_burn": 410,
+      "billing_contact": "founder@autoinsure.example",
+      "_note": "Nearly out of credits AND past_due. Good super-admin dashboards flag this account (will run dry in < 1 day at current burn). Decide what your system does when an account hits zero mid-verification."
+    }
+  ],
+  "module_costs_in_credits": {
+    "anura": 2,
+    "trustedform": 1,
+    "dnc": 1,
+    "blacklist_alliance": 2,
+    "phone_validation": 3,
+    "email_validation": 2,
+    "vpn_proxy": 1,
+    "enrichment": 4,
+    "duplicate_detection": 1,
+    "voice": 5
+  }
+}

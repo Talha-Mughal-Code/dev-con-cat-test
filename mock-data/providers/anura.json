@@ -1,0 +1,18 @@
+{
+  "_comment": "Anura.io — Bot, Malware & Fraud-Farm Detection. Verdict values: 'good' (real human), 'suspect' (uncertain), 'bad' (bot/malware/fraud-farm). `rule_ids` explain why. This is ONE voice in the consensus, not the final answer.",
+  "provider": "anura",
+  "results": {
+    "L-1001": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.98 },
+    "L-1002": { "result": "bad", "rule_ids": ["DATACENTER_IP", "AUTOMATION_TOOL", "FORM_FILL_TOO_FAST"], "invalid_traffic_type": "bot", "confidence": 0.99 },
+    "L-1003": { "result": "suspect", "rule_ids": ["ANONYMIZER_IP"], "invalid_traffic_type": "anonymizer", "confidence": 0.61 },
+    "L-1004": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.95 },
+    "L-1005": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.93 },
+    "L-1006": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.96 },
+    "L-1007": { "result": "suspect", "rule_ids": ["DEVICE_REPUTATION_LOW"], "invalid_traffic_type": null, "confidence": 0.55 },
+    "L-1008": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.9 },
+    "L-1009": { "result": "suspect", "rule_ids": ["FRAUD_FARM_CLUSTER", "REPEAT_DEVICE_MULTI_IDENTITY"], "invalid_traffic_type": "human_fraud_farm", "confidence": 0.72 },
+    "L-1010": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.94 },
+    "L-1011": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.92 },
+    "L-1012": { "result": "good", "rule_ids": [], "invalid_traffic_type": null, "confidence": 0.99 }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_comment": "Super Pixel in-development module — VPN & Proxy Detection + IP/VPN site-visit matching. Detects whether the lead's IP is a VPN, proxy, Tor exit, or datacenter, and whether the site-visit IP matches the submission IP (the 'VPN problem'). `risk` = 'low' | 'medium' | 'high'.",
+  "provider": "vpn_proxy",
+  "results": {
+    "L-1001": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1002": { "is_vpn": false, "is_proxy": true, "is_tor": true, "is_datacenter": true, "site_visit_ip_matches_submit_ip": false, "risk": "high", "notes": "Tor exit node + datacenter ASN." },
+    "L-1003": { "is_vpn": true, "is_proxy": false, "is_tor": false, "is_datacenter": true, "site_visit_ip_matches_submit_ip": false, "risk": "high", "notes": "Commercial VPN (NordVPN ASN). Site visit came from a residential IP; submission from VPN — classic VPN masking." },
+    "L-1004": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1005": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1006": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1007": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "medium", "notes": "Residential IP but device reputation is low; kept as medium." },
+    "L-1008": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1009": { "is_vpn": true, "is_proxy": true, "is_tor": false, "is_datacenter": true, "site_visit_ip_matches_submit_ip": false, "risk": "high", "notes": "Datacenter proxy pool; multiple identities seen from same /24 (see anura fraud-farm signal)." },
+    "L-1010": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1011": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" },
+    "L-1012": { "is_vpn": false, "is_proxy": false, "is_tor": false, "is_datacenter": false, "site_visit_ip_matches_submit_ip": true, "risk": "low" }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_comment": "Super Pixel in-development module — Voice Recognition AI. For leads captured via a click-to-call or voice step, a short voice sample is analyzed to detect voice-actor fraud (the same actor reused across many 'different' leads) and synthetic/AI voices. Not every lead has a voice sample. `verdict` = 'human_unique' | 'human_reused_actor' | 'synthetic' | null (no sample).",
+  "provider": "voice",
+  "results": {
+    "L-1001": { "has_sample": false, "verdict": null },
+    "L-1002": { "has_sample": false, "verdict": null },
+    "L-1003": { "has_sample": false, "verdict": null },
+    "L-1004": { "has_sample": false, "verdict": null },
+    "L-1005": { "has_sample": false, "verdict": null },
+    "L-1006": { "has_sample": true, "verdict": "human_unique", "voiceprint_id": "vp_88ac", "matched_prior_leads": [] },
+    "L-1007": { "has_sample": false, "verdict": null },
+    "L-1008": { "has_sample": false, "verdict": null },
+    "L-1009": { "has_sample": true, "verdict": "human_reused_actor", "voiceprint_id": "vp_41fe", "matched_prior_leads": ["L-0912", "L-0977", "L-1044"], "notes": "Same voiceprint submitted under 4 different names/numbers in 30 days — voice-actor fraud." },
+    "L-1010": { "has_sample": false, "verdict": null },
+    "L-1011": { "has_sample": false, "verdict": null },
+    "L-1012": { "has_sample": true, "verdict": "human_unique", "voiceprint_id": "vp_5b20", "matched_prior_leads": [] }
+  }
+}

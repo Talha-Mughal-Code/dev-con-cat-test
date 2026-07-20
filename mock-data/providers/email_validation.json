@@ -1,0 +1,18 @@
+{
+  "_comment": "Validation Providers — Email Consensus. Two independent email-validation providers run per lead. Look for agreement. `deliverable` = mailbox exists and accepts mail. `disposable` = throwaway/temp domain. `fraud_score` 0-100 (higher = riskier).",
+  "provider": "email_validation",
+  "results": {
+    "L-1001": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 4 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 6 } } },
+    "L-1002": { "providers": { "zerobounce": { "deliverable": false, "disposable": true, "fraud_score": 93 }, "neverbounce": { "deliverable": false, "disposable": true, "fraud_score": 88 } } },
+    "L-1003": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 11 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 9 } } },
+    "L-1004": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 7 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 5 } } },
+    "L-1005": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 18 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 15 } } },
+    "L-1006": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 8 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 10 } } },
+    "L-1007": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 12 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 14 } } },
+    "L-1008": { "providers": { "zerobounce": { "deliverable": false, "disposable": false, "fraud_score": 71 }, "neverbounce": { "deliverable": false, "disposable": false, "fraud_score": 66 }, "_note": "Domain does not resolve (note the homoglyph in the lead's email). Both providers agree: undeliverable." } },
+    "L-1009": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 34 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 29 } } },
+    "L-1010": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 9 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 7 } } },
+    "L-1011": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 13 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 16 } } },
+    "L-1012": { "providers": { "zerobounce": { "deliverable": true, "disposable": false, "fraud_score": 3 }, "neverbounce": { "deliverable": true, "disposable": false, "fraud_score": 5 } } }
+  }
+}

@@ -1,0 +1,31 @@
+# Ruby / Rails (candidates will add their app on top of this starter)
+*.rbc
+*.gem
+.bundle/
+vendor/bundle/
+log/*.log
+tmp/
+.byebug_history
+
+# Rails
+/db/*.sqlite3
+/db/*.sqlite3-*
+/config/master.key
+/config/credentials/*.key
+/storage/
+/public/assets/
+.env
+.env.*
+
+# Node / assets
+node_modules/
+yarn-error.log
+/app/assets/builds/*
+!/app/assets/builds/.keep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,14 @@
+{
+  "_comment": "Users belong to an account (multi-tenant). Roles: 'super_admin' (platform operator — sees all accounts, credits, subscriptions across the whole system), 'account_admin' (manages their own account, users, pixels, billing), 'member' (day-to-day: views leads/activity, manages pixels). Passwords here are placeholders — implement real auth, do NOT ship these as-is. A user must only ever see data for their own account, except super_admin.",
+  "users": [
+    { "user_id": "u_root", "account_id": null, "role": "super_admin", "name": "Platform Operator", "email": "admin@catchingconsent.example", "placeholder_password": "ChangeMe!superadmin" },
+
+    { "user_id": "u_sp_admin", "account_id": "acct_solarpro", "role": "account_admin", "name": "Dana Whitfield", "email": "dana@solarpro.example", "placeholder_password": "ChangeMe!sp1" },
+    { "user_id": "u_sp_mem1", "account_id": "acct_solarpro", "role": "member", "name": "Luis Fernandez", "email": "luis@solarpro.example", "placeholder_password": "ChangeMe!sp2" },
+
+    { "user_id": "u_me_admin", "account_id": "acct_medicareedge", "role": "account_admin", "name": "Priya Raman", "email": "priya@medicareedge.example", "placeholder_password": "ChangeMe!me1" },
+    { "user_id": "u_me_mem1", "account_id": "acct_medicareedge", "role": "member", "name": "Tom Becker", "email": "tom@medicareedge.example", "placeholder_password": "ChangeMe!me2" },
+
+    { "user_id": "u_ai_admin", "account_id": "acct_autoinsure", "role": "account_admin", "name": "Chris Doyle", "email": "chris@autoinsure.example", "placeholder_password": "ChangeMe!ai1" }
+  ]
+}

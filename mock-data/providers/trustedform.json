@@ -1,0 +1,18 @@
+{
+  "_comment": "ActiveProspect / TrustedForm — Consent Certificate Retain & Verify. The certificate must be RETAINED and VERIFIED against the lead's claim. Check: cert exists, matches the phone/email on the lead, is not expired, and the page fingerprint matches the landing_page_url. `status` = 'verified' | 'mismatch' | 'expired' | 'not_found'.",
+  "provider": "trustedform",
+  "results": {
+    "L-1001": { "status": "verified", "cert_created_at": "2026-07-14T15:02:03Z", "matches_phone": true, "matches_email": true, "page_url": "https://solar-savings.example.com/quote", "consent_language_present": true, "expires_at": "2027-07-14T15:02:03Z" },
+    "L-1002": { "status": "verified", "cert_created_at": "2026-07-14T15:07:40Z", "matches_phone": true, "matches_email": true, "page_url": "https://solar-savings.example.com/quote", "consent_language_present": true, "expires_at": "2027-07-14T15:07:40Z" },
+    "L-1003": { "status": "verified", "cert_created_at": "2026-07-14T15:11:58Z", "matches_phone": true, "matches_email": true, "page_url": "https://medicare-help.example.com/enroll", "consent_language_present": true, "expires_at": "2027-07-14T15:11:58Z" },
+    "L-1004": { "status": "verified", "cert_created_at": "2026-07-14T15:19:50Z", "matches_phone": true, "matches_email": true, "page_url": "https://medicare-help.example.com/enroll", "consent_language_present": true, "expires_at": "2027-07-14T15:19:50Z" },
+    "L-1005": { "status": "verified", "cert_created_at": "2026-07-14T15:24:25Z", "matches_phone": true, "matches_email": true, "page_url": "https://auto-quotes.example.com/start", "consent_language_present": true, "expires_at": "2027-07-14T15:24:25Z" },
+    "L-1006": { "status": "verified", "cert_created_at": "2026-07-14T15:29:04Z", "matches_phone": true, "matches_email": true, "page_url": "https://auto-quotes.example.com/start", "consent_language_present": true, "expires_at": "2027-07-14T15:29:04Z" },
+    "L-1007": { "status": "verified", "cert_created_at": "2026-07-14T15:33:40Z", "matches_phone": true, "matches_email": true, "page_url": "https://solar-savings.example.com/quote", "consent_language_present": true, "expires_at": "2027-07-14T15:33:40Z" },
+    "L-1008": { "status": "verified", "cert_created_at": "2026-07-14T15:38:15Z", "matches_phone": true, "matches_email": true, "page_url": "https://medicare-help.example.com/enroll", "consent_language_present": true, "expires_at": "2027-07-14T15:38:15Z" },
+    "L-1009": { "status": "verified", "cert_created_at": "2026-07-14T15:44:02Z", "matches_phone": true, "matches_email": true, "page_url": "https://auto-quotes.example.com/start", "consent_language_present": true, "expires_at": "2027-07-14T15:44:02Z" },
+    "L-1010": { "status": "mismatch", "cert_created_at": "2026-05-02T09:14:00Z", "matches_phone": false, "matches_email": true, "page_url": "https://unrelated-offers.example.com/win", "consent_language_present": false, "expires_at": "2026-06-01T09:14:00Z", "notes": "Cert phone does not match lead phone; page fingerprint differs from claimed landing page; certificate window already closed." },
+    "L-1011": { "status": "verified", "cert_created_at": "2026-07-14T15:55:30Z", "matches_phone": true, "matches_email": true, "page_url": "https://medicare-help.example.com/enroll", "consent_language_present": true, "expires_at": "2027-07-14T15:55:30Z" },
+    "L-1012": { "status": "verified", "cert_created_at": "2026-07-14T16:01:12Z", "matches_phone": true, "matches_email": true, "page_url": "https://auto-quotes.example.com/start", "consent_language_present": true, "expires_at": "2027-07-14T16:01:12Z" }
+  }
+}

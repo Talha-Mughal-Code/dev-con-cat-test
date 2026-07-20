@@ -1,0 +1,18 @@
+{
+  "_comment": "DNC.com — DNC & Callback Checks. Screens National/State Do-Not-Call status and callback-window logic (prior TCPA follow-up calls). `dnc_status` = 'callable' | 'dnc_listed' | 'internal_dnc'. `callback_window_open` indicates whether the buyer may legally dial right now.",
+  "provider": "dnc",
+  "results": {
+    "L-1001": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1002": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1003": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1004": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": "2026-06-30T18:22:00Z" },
+    "L-1005": { "dnc_status": "dnc_listed", "national_dnc": true, "state_dnc": true, "internal_dnc": false, "callback_window_open": false, "last_contact_at": null },
+    "L-1006": { "dnc_status": "dnc_listed", "national_dnc": true, "state_dnc": false, "internal_dnc": false, "callback_window_open": false, "last_contact_at": null },
+    "L-1007": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1008": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1009": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1010": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1011": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null },
+    "L-1012": { "dnc_status": "callable", "national_dnc": false, "state_dnc": false, "internal_dnc": false, "callback_window_open": true, "last_contact_at": null }
+  }
+}
