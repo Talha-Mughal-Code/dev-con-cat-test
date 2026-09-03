@@ -254,6 +254,12 @@ unverified = TenantScope.across_accounts { Lead.where(current_verification_run_i
 if unverified.any?
   say "verifying #{unverified.size} #{'lead'.pluralize(unverified.size)}..."
 
+  # The gateway's simulated vendor latency exists so the live activity panel
+  # visibly streams. It serves no purpose here and would add half a minute to a
+  # first run, so it is switched off for seeding only.
+  previous_latency = Rails.configuration.x.provider_latency_ms
+  Rails.configuration.x.provider_latency_ms = nil
+
   unverified.sort_by(&:captured_at).each do |lead|
     run = TenantScope.for_account(lead.account) { Verification::Runner.call(lead: lead) }
 
@@ -269,6 +275,8 @@ if unverified.any?
                  run.short_circuited? ? "(short-circuited)" : "")
     end
   end
+
+  Rails.configuration.x.provider_latency_ms = previous_latency
 
   puts
   TenantScope.across_accounts do

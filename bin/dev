@@ -1,33 +1,47 @@
 #!/usr/bin/env bash
 # Starts everything the demo needs: the web server and the job worker.
 #
-# Two processes because layer verification runs as durable background jobs
-# (Solid Queue), and the whole point of the real-time pixel is that the worker
-# and the web server are genuinely separate - the activity stream crosses that
-# boundary through the database rather than through process memory.
+# Two processes, because layer verification runs as durable background jobs
+# (Solid Queue) and the real-time pixel genuinely crosses that boundary - the
+# activity stream reaches the browser through the database, not through process
+# memory. Running them together is what makes the demo one command.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# db:prepare creates both databases AND seeds when it creates them, so there is
+# no separate db:seed step here - running it again would just print the summary
+# twice.
 if [ ! -f storage/development.sqlite3 ]; then
-  echo "==> No database yet; preparing and seeding"
+  echo "==> First run: preparing and seeding both databases (about 20 seconds)"
   bin/rails db:prepare
-  bin/rails db:seed
 fi
 
-echo "==> Puma on http://localhost:3000  (demo funnel: http://localhost:3000/demo)"
-echo "==> Solid Queue worker"
+echo
+echo "==> Puma            http://localhost:${PORT:-3000}"
+echo "==> Demo funnel     http://localhost:${PORT:-3000}/demo"
+echo "==> Sign in         http://localhost:${PORT:-3000}/login"
+echo "==> Solid Queue worker starting"
+echo "    (Ctrl-C stops both)"
 echo
 
-pids=()
+web_pid=""
+job_pid=""
+
 cleanup() {
   trap - INT TERM EXIT
-  for pid in "${pids[@]:-}"; do kill "$pid" 2>/dev/null || true; done
+  [ -n "$web_pid" ] && kill "$web_pid" 2>/dev/null || true
+  [ -n "$job_pid" ] && kill "$job_pid" 2>/dev/null || true
   wait 2>/dev/null || true
 }
 trap cleanup INT TERM EXIT
 
-bin/rails server --port "${PORT:-3000}" & pids+=($!)
-bin/jobs & pids+=($!)
+bin/rails server --port "${PORT:-3000}" &
+web_pid=$!
+bin/jobs &
+job_pid=$!
 
-wait -n
-cleanup
+# `wait -n` would be tidier but needs bash 4.3, and macOS still ships bash 3.2 -
+# so this polls instead, and exits as soon as either process dies.
+while kill -0 "$web_pid" 2>/dev/null && kill -0 "$job_pid" 2>/dev/null; do
+  sleep 1
+done
