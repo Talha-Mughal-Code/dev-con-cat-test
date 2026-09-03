@@ -6,10 +6,12 @@
 >
 > ```bash
 > bundle install
-> bin/rails db:prepare && bin/rails db:seed
-> bin/dev                 # then open http://localhost:3000/demo
-> bin/rails test          # 181 tests
+> bin/dev            # prepares, seeds, and starts the app + job worker
+> bin/rails test     # 181 tests
 > ```
+>
+> Then open <http://localhost:3000/demo> — the landing page wired to the real
+> backend, streaming actual layer-by-layer verdicts.
 >
 > Sign in as `dana@solarpro.example` (account admin),
 > `luis@solarpro.example` (member, read-only), or

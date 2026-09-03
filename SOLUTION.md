@@ -16,9 +16,17 @@ Requires Ruby 3.1+ and nothing else — no Postgres, no Redis.
 
 ```bash
 bundle install
-bin/rails db:prepare   # creates both SQLite databases (app + job queue)
-bin/rails db:seed      # loads all five mock-data files, then verifies the 12 leads
-bin/dev                # starts Puma and the Solid Queue worker together
+bin/dev     # prepares + seeds on first run, then starts Puma and the job worker
+```
+
+`bin/dev` runs two processes because layer verification is durable background
+work and the real-time stream genuinely crosses that boundary — through the
+database, not process memory. To do the steps by hand:
+
+```bash
+bin/rails db:prepare   # creates both SQLite databases (app + job queue) and seeds
+bin/rails db:seed      # idempotent: safe to re-run, re-charges nobody
+bin/rails server       # and, in another terminal, bin/jobs
 ```
 
 Then open **<http://localhost:3000/demo>** — the wired landing page — or sign in
