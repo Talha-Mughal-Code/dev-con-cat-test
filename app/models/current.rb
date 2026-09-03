@@ -9,11 +9,6 @@ class Current < ActiveSupport::CurrentAttributes
   # contexts: platform-operator reads and job bootstrapping.
   attribute :tenant_bypass
 
-  def account=(account)
-    super
-    Rails.logger.push_tags(account.public_id) if account && Rails.logger.respond_to?(:push_tags)
-  end
-
   def account_id
     account&.id
   end
