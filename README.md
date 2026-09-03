@@ -1,3 +1,25 @@
+# Super Pixel
+
+> **This repository now contains the completed solution.**
+> Start with **[`SOLUTION.md`](SOLUTION.md)** for the architecture, the reasoning
+> behind it, and answers to every question in `docs/DESIGN_QUESTIONS.md`.
+>
+> ```bash
+> bundle install
+> bin/rails db:prepare && bin/rails db:seed
+> bin/dev                 # then open http://localhost:3000/demo
+> bin/rails test          # 181 tests
+> ```
+>
+> Sign in as `dana@solarpro.example` (account admin),
+> `luis@solarpro.example` (member, read-only), or
+> `admin@catchingconsent.example` (platform operator) — password
+> `super-pixel-demo-2026` for all of them.
+>
+> The original brief follows, unchanged.
+
+---
+
 # Super Pixel — Take-Home Assignment
 
 This repository is a **take-home coding assignment** for a mid-to-senior
