@@ -5,7 +5,7 @@ through eleven fraud and consent detection layers, a consensus engine turns
 their voices into one defensible verdict, and a signed consent certificate is
 issued as evidence.
 
-**181 tests, 648 assertions, all passing.** ~6,200 lines of Ruby, ~1,600 of ERB,
+**184 tests, 660 assertions, all passing.** ~6,200 lines of Ruby, ~1,600 of ERB,
 325 of pixel JavaScript, 19 tables.
 
 ---
@@ -48,7 +48,35 @@ bin/rails test                     # the whole suite
 bin/rails leads:reconcile_credits  # prove the credit cache matches the ledger
 LEAD=L-1009 bin/rails leads:reverify
 SUPER_PIXEL_OUTAGES=trustedform,dnc bin/dev   # demo fail-closed on a live system
+
+# Drive the pixel API over real HTTP, without a browser
+bin/rails demo:lead                       # one lead, prints the live layer results
+EMAIL=x@mail-tempz.example bin/rails demo:lead
+bin/rails demo:concurrent N=8             # 8 simultaneous submissions, with timings
+bin/rails demo:duplicate_beacon           # beacon idempotence
 ```
+
+### Measured limits
+
+Ingestion latency, measured with `demo:concurrent` while the job worker drains
+eleven layers per lead:
+
+| Simultaneous submissions | `/leads` median | Worst | Outcome |
+|---|---|---|---|
+| 1 | 71 ms | 71 ms | all succeed |
+| 2 | 29 ms | 29 ms | all succeed |
+| 4 | 58 ms | 85 ms | all succeed |
+| 8 | 543 ms | 656 ms | all succeed |
+| 12 | 17 s | 43 s | all succeed, badly queued |
+| 20 | 21 s | 25 s | 19 of 20 |
+
+Comfortable to about 8 concurrent submissions; beyond that requests queue behind
+SQLite's single writer rather than failing. Across 44 concurrent leads there was
+**zero credit drift, zero invalid certificates and zero layers wrongly recorded
+as errored** — the integrity guarantees hold even where the latency does not.
+
+This is the honest cost of a database that needs no setup, and §10 says what I
+would change. It is worth knowing before anyone load-tests it and is surprised.
 
 ### Seeing the pixel work
 
@@ -532,9 +560,12 @@ Why, since the brief asks it to be justified:
   so it would need a pubsub dependency purely to reach the browser. Both
   processes already share the database, so tailing a table needs nothing new.
 
-**What this trades away:** a Puma thread per open connection. Correct for a demo
-and a modest production load, wrong at tens of thousands of concurrent viewers —
-at which point the answer is pubsub behind an evented server, not a bigger thread
+**What this trades away:** a Puma thread per open connection, and that is not
+theoretical — it bit during testing. Development Puma defaults to three threads,
+so two open activity panels plus one ordinary request saturated the server;
+`config/puma.rb` now runs eight and explains why. Correct for a demo and a
+modest production load, wrong at tens of thousands of concurrent viewers — at
+which point the answer is pubsub behind an evented server, not a bigger thread
 pool. The 250ms poll also makes events up to 250ms late, imperceptible beside the
 vendor latency it reports on. Database connections are checked out per poll
 rather than held for the connection's lifetime, or a handful of open panels would
@@ -657,11 +688,34 @@ credit charge as the inline one.
   change". I chose not to half-build it.
 - **`ActivityEvent` grows without bound.** Fine at this scale; it needs
   partitioning or archival before it isn't.
-- **SQLite write contention.** Parallel layer jobs contend on SQLite's single
-  writer. `Database::Retry` handles it with backoff and jitter, and every retried
-  block is idempotent — but on Postgres, with real MVCC, none of that machinery
-  would be necessary. That is the honest cost of choosing a database that needs
-  no setup.
+- **SQLite write contention above ~8 concurrent submissions.** Requests queue
+  rather than fail (see *Measured limits*), and integrity holds, but a 17-second
+  response is effectively broken UX for a browser. Three things fought this:
+  batching writes so a lead costs ~14 transactions instead of ~40, making
+  `Database::Retry` re-entrant so nested budgets stop multiplying, and giving
+  ingestion a much larger retry budget than an activity event, because losing
+  that race means losing a lead.
+
+  I also tried `BEGIN IMMEDIATE` — the textbook fix for SQLite refusing to
+  upgrade a `DEFERRED` transaction's lock, and what Rails 8 defaults to — and
+  **measured it as worse for this workload**: 25s and 1-of-4 succeeding, versus
+  5.3s and 2-of-4 with `DEFERRED` plus retries, because it serialises every
+  transaction including read-only ones into a convoy. I kept the configuration
+  the measurements supported rather than the one the documentation recommends,
+  which is the sort of decision I would rather be able to show working than
+  argue for in the abstract.
+
+  On Postgres, with real MVCC and row-level locking, none of this machinery is
+  necessary. That is the honest cost of a database that needs no setup.
+
+- **A run whose layer jobs all exhaust their retries used to hang forever** — no
+  verdict, no certificate, a lead the buyer paid for that nobody would decide
+  about. `Verification::StaleRunSweeper` now runs every five minutes, records
+  genuinely abandoned layers as `timed_out`, and finalises through the normal
+  coordinator, so the existing fail-closed and coverage-floor rules decide the
+  outcome. It cannot quietly accept a lead most of whose checks never ran. What
+  it does not do is retry — if the jobs already exhausted their retries, running
+  them again mostly delays the buyer.
 - **No rate limiting on the pixel endpoints.** The origin allowlist and capture
   token raise the cost of abuse, but a determined attacker with an allowed origin
   could still flood ingestion and burn a buyer's credits. Per-pixel rate limiting

@@ -7,7 +7,7 @@
 > ```bash
 > bundle install
 > bin/dev            # prepares, seeds, and starts the app + job worker
-> bin/rails test     # 181 tests
+> bin/rails test     # 184 tests
 > ```
 >
 > Then open <http://localhost:3000/demo> — the landing page wired to the real
