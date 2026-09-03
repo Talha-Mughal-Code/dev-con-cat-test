@@ -15,18 +15,22 @@ class LayerResult < ApplicationRecord
   include TenantScoped
 
   STATES = %w[pending completed not_enabled not_applicable errored
-              skipped_insufficient_credits timed_out].freeze
+              skipped_insufficient_credits skipped_hard_stop timed_out].freeze
   SIGNALS = %w[pass warn fail info].freeze
 
-  # States that mean "this layer never spoke, and that is not its fault or ours"
-  # - they do not count against coverage.
-  NON_APPLICABLE_STATES = %w[not_enabled not_applicable].freeze
+  # States that mean "this layer never spoke, and no evidence is missing as a
+  # result" - so they do not count against coverage. skipped_hard_stop belongs
+  # here because we chose it: the lead was already dispositively rejected, and
+  # holding a deliberate saving against our own coverage score would be
+  # incoherent. It is still reported by name on the certificate.
+  SILENT_STATES = %w[not_enabled not_applicable skipped_hard_stop].freeze
 
   belongs_to :verification_run
   belongs_to :detection_module
 
   json_attribute :payload, default: {}
   json_attribute :breakdown, default: {}
+  json_attribute :findings, default: []
 
   validates :module_key, presence: true, uniqueness: { scope: :verification_run_id }
   validates :state, inclusion: { in: STATES }
@@ -40,6 +44,7 @@ class LayerResult < ApplicationRecord
   def pending?  = state == "pending"
   def failed_to_answer? = state.in?(%w[errored timed_out])
   def skipped_for_credits? = state == "skipped_insufficient_credits"
+  def skipped_after_hard_stop? = state == "skipped_hard_stop"
   def not_enabled? = state == "not_enabled"
   def not_applicable? = state == "not_applicable"
 
@@ -53,12 +58,38 @@ class LayerResult < ApplicationRecord
     when "not_enabled"                  then "not_enabled"
     when "not_applicable"               then "skip"
     when "skipped_insufficient_credits" then "skipped"
+    when "skipped_hard_stop"            then "skipped"
     when "errored", "timed_out"         then "unavailable"
     else "pending"
     end
   end
 
   def display_name = detection_module.name
+
+  # Rehydrates the evaluator's findings so the engine can re-resolve them
+  # against the policy. Persisting findings rather than a resolved score means
+  # the policy is applied in exactly one place - Engine::Consensus.
+  def engine_findings
+    findings.map do |raw|
+      Engine::Finding.new(
+        module_key: raw["module_key"], hard_stop_code: raw["hard_stop_code"],
+        weight_key: raw["weight_key"], detail: raw["detail"], advisory: raw["advisory"]
+      )
+    end
+  end
+
+  def to_engine_outcome
+    assessment =
+      if answered?
+        Engine::Assessment.new(module_key: module_key, findings: engine_findings,
+                               summary: summary, breakdown: breakdown)
+      end
+
+    Engine::LayerOutcome.new(
+      module_key: module_key, state: state, assessment: assessment,
+      fail_closed: detection_module.fail_closed?
+    )
+  end
 
   def to_certificate_entry
     {

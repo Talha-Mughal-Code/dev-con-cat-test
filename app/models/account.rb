@@ -7,6 +7,12 @@ class Account < ApplicationRecord
   # Warn a buyer while they can still do something about it.
   LOW_CREDIT_FRACTION = 0.20
   CRITICAL_DAYS_OF_RUNWAY = 3.0
+  # Below this much observed history, extrapolating a daily rate is arithmetic
+  # rather than information: a handful of verifications in the last minute would
+  # otherwise imply either an absurd burn rate or a reassuring one, depending
+  # purely on when you looked.
+  MIN_HISTORY_DAYS_FOR_MEASURED_BURN = 3.0
+  BURN_WINDOW = 7.days
 
   has_many :users, dependent: :restrict_with_error
   has_many :pixels, dependent: :restrict_with_error
@@ -39,16 +45,36 @@ class Account < ApplicationRecord
     monthly_credit_allowance - credits_consumed
   end
 
-  # Trailing burn measured from the ledger, falling back to the seeded baseline
-  # until there is enough history for the average to mean anything.
-  def daily_burn_rate(window: 7.days)
-    since = window.ago
-    spent = scoped_to_self do
-      credit_ledger_entries.debits.where(occurred_at: since..).sum(:amount).abs
+  # Trailing burn measured from the ledger, falling back to the account's
+  # modelled rate until there is enough history for an average to mean anything.
+  def daily_burn_rate
+    measured_daily_burn || baseline_daily_burn
+  end
+
+  # nil when there is too little history to extrapolate from, which is the
+  # honest answer rather than a confident wrong number.
+  def measured_daily_burn
+    return @measured_daily_burn if defined?(@measured_daily_burn)
+
+    @measured_daily_burn = scoped_to_self do
+      entries = credit_ledger_entries.debits.where(occurred_at: BURN_WINDOW.ago..)
+      earliest = entries.minimum(:occurred_at)
+      next nil if earliest.nil?
+
+      span_days = (Time.current - earliest) / 1.day
+      next nil if span_days < MIN_HISTORY_DAYS_FOR_MEASURED_BURN
+
+      spent = entries.sum(:amount).abs
+      next nil if spent.zero?
+
+      (spent / span_days).round
     end
-    days = [ (Time.current - [ since, created_at ].max) / 1.day, 1.0 ].max
-    measured = spent / days
-    measured.positive? ? measured.round : baseline_daily_burn
+  end
+
+  # Shown on the platform dashboard so an operator can tell a measured rate from
+  # a modelled one rather than trusting both equally.
+  def burn_rate_basis
+    measured_daily_burn ? :measured : :modelled
   end
 
   def days_until_dry

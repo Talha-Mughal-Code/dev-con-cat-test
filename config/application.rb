@@ -35,7 +35,9 @@ module SuperPixel
 
     # Layer verification runs as background jobs; Solid Queue keeps them durable
     # and inspectable without introducing Redis. See SOLUTION.md ("Jobs").
-    config.active_job.queue_adapter = :solid_queue
+    # The adapter itself is chosen per environment - the test environment uses
+    # ActiveJob's test adapter so job assertions work - but the queue database
+    # is configured here because it is the same wherever the worker runs.
     config.solid_queue.connects_to = { database: { writing: :queue } }
 
     # Domain code lives in plain-old-Ruby namespaces rather than being crammed

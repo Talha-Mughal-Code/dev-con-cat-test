@@ -8,7 +8,9 @@
 class VerificationRun < ApplicationRecord
   include TenantScoped
 
-  STATUSES = %w[pending running completed halted_insufficient_credits errored].freeze
+  STATUSES = %w[pending wave_1 wave_2 finalizing completed
+                halted_insufficient_credits errored].freeze
+  IN_FLIGHT_STATUSES = %w[pending wave_1 wave_2 finalizing].freeze
   VERDICTS = %w[accept review reject].freeze
 
   belongs_to :lead
@@ -27,7 +29,7 @@ class VerificationRun < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   def completed? = status == "completed"
-  def running?   = status.in?(%w[pending running])
+  def running?   = status.in?(IN_FLIGHT_STATUSES)
   def halted?    = status == "halted_insufficient_credits"
   def errored?   = status == "errored"
 
@@ -63,6 +65,17 @@ class VerificationRun < ApplicationRecord
 
   def layer_results_by_key
     layer_results.includes(:detection_module).index_by(&:module_key)
+  end
+
+  # Rebuilds what the engine needs from persisted rows. Layers run in separate
+  # jobs, so the finaliser cannot rely on anything held in memory - the database
+  # is the coordination substrate.
+  def engine_outcomes
+    layer_results.includes(:detection_module).map(&:to_engine_outcome)
+  end
+
+  def short_circuited_layers
+    layer_results.where(state: "skipped_hard_stop")
   end
 
   # Layers the buyer paid for and that spoke, in display order.

@@ -80,13 +80,13 @@ FOREIGN KEY ("account_id")
 , CONSTRAINT "fk_rails_6cfa1285c2"
 FOREIGN KEY ("consensus_policy_id")
   REFERENCES "consensus_policies" ("id")
-, CONSTRAINT verification_runs_status_valid CHECK (status IN ('pending','running','completed','halted_insufficient_credits','errored')), CONSTRAINT verification_runs_verdict_valid CHECK (verdict IS NULL OR verdict IN ('accept','review','reject')), CONSTRAINT verification_runs_verdict_requires_completion CHECK ((status = 'completed' AND verdict IS NOT NULL) OR (status <> 'completed' AND verdict IS NULL)));
+, CONSTRAINT verification_runs_status_valid CHECK (status IN ('pending','wave_1','wave_2','finalizing','completed','halted_insufficient_credits','errored')), CONSTRAINT verification_runs_verdict_valid CHECK (verdict IS NULL OR verdict IN ('accept','review','reject')), CONSTRAINT verification_runs_verdict_requires_completion CHECK ((status = 'completed' AND verdict IS NOT NULL) OR (status <> 'completed' AND verdict IS NULL)));
 CREATE INDEX "index_verification_runs_on_lead_id" ON "verification_runs" ("lead_id");
 CREATE INDEX "index_verification_runs_on_account_id" ON "verification_runs" ("account_id");
 CREATE INDEX "index_verification_runs_on_consensus_policy_id" ON "verification_runs" ("consensus_policy_id");
 CREATE INDEX "index_verification_runs_on_account_id_and_created_at" ON "verification_runs" ("account_id", "created_at");
 CREATE INDEX "index_verification_runs_on_account_id_and_verdict" ON "verification_runs" ("account_id", "verdict");
-CREATE TABLE IF NOT EXISTS "layer_results" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "verification_run_id" integer NOT NULL, "account_id" integer NOT NULL, "detection_module_id" integer NOT NULL, "module_key" varchar NOT NULL, "state" varchar DEFAULT 'pending' NOT NULL, "signal" varchar, "hard_stop" boolean DEFAULT 0 NOT NULL, "risk_contribution" float DEFAULT 0.0 NOT NULL, "summary" varchar, "payload" text, "breakdown" text, "credits_charged" integer DEFAULT 0 NOT NULL, "wave" integer DEFAULT 2 NOT NULL, "error_class" varchar, "error_message" varchar, "started_at" datetime(6), "completed_at" datetime(6), "latency_ms" integer, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_b1b5c99682"
+CREATE TABLE IF NOT EXISTS "layer_results" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "verification_run_id" integer NOT NULL, "account_id" integer NOT NULL, "detection_module_id" integer NOT NULL, "module_key" varchar NOT NULL, "state" varchar DEFAULT 'pending' NOT NULL, "signal" varchar, "hard_stop" boolean DEFAULT 0 NOT NULL, "risk_contribution" float DEFAULT 0.0 NOT NULL, "summary" varchar, "payload" text, "breakdown" text, "findings" text DEFAULT '[]' NOT NULL, "credits_charged" integer DEFAULT 0 NOT NULL, "wave" integer DEFAULT 2 NOT NULL, "error_class" varchar, "error_message" varchar, "started_at" datetime(6), "completed_at" datetime(6), "latency_ms" integer, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_b1b5c99682"
 FOREIGN KEY ("verification_run_id")
   REFERENCES "verification_runs" ("id")
 , CONSTRAINT "fk_rails_29b658b37b"
@@ -95,7 +95,7 @@ FOREIGN KEY ("account_id")
 , CONSTRAINT "fk_rails_79c5897d4f"
 FOREIGN KEY ("detection_module_id")
   REFERENCES "detection_modules" ("id")
-, CONSTRAINT layer_results_state_valid CHECK (state IN ('pending','completed','not_enabled','not_applicable','errored','skipped_insufficient_credits','timed_out')), CONSTRAINT layer_results_signal_valid CHECK (signal IS NULL OR signal IN ('pass','warn','fail','info')), CONSTRAINT layer_results_signal_requires_completion CHECK ((state = 'completed' AND signal IS NOT NULL) OR (state <> 'completed' AND signal IS NULL)), CONSTRAINT layer_results_charge_only_when_answered CHECK (state = 'completed' OR credits_charged = 0));
+, CONSTRAINT layer_results_state_valid CHECK (state IN ('pending','completed','not_enabled','not_applicable','errored','skipped_insufficient_credits','skipped_hard_stop','timed_out')), CONSTRAINT layer_results_signal_valid CHECK (signal IS NULL OR signal IN ('pass','warn','fail','info')), CONSTRAINT layer_results_signal_requires_completion CHECK ((state = 'completed' AND signal IS NOT NULL) OR (state <> 'completed' AND signal IS NULL)), CONSTRAINT layer_results_charge_only_when_answered CHECK (state = 'completed' OR credits_charged = 0));
 CREATE INDEX "index_layer_results_on_verification_run_id" ON "layer_results" ("verification_run_id");
 CREATE INDEX "index_layer_results_on_account_id" ON "layer_results" ("account_id");
 CREATE INDEX "index_layer_results_on_detection_module_id" ON "layer_results" ("detection_module_id");

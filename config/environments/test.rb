@@ -6,6 +6,14 @@ require "active_support/core_ext/integer/time"
 # and recreated between test runs. Don't rely on the data there!
 
 Rails.application.configure do
+  # No artificial vendor latency in tests.
+  config.x.provider_latency_ms = nil
+
+  # ActiveJob's test adapter, so assert_enqueued_with and perform_enqueued_jobs
+  # work. Tests that want the pipeline to run to completion in-process use
+  # Verification::Runner, which drives the same objects with perform_now.
+  config.active_job.queue_adapter = :test
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.

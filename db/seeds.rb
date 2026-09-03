@@ -227,6 +227,49 @@ load_mock("leads.json").fetch("leads").each do |data|
   end
 end
 say "#{Lead.unscoped.count} leads"
+# ---------------------------------------------------------------------------
+# 8. Verify the seeded leads
+# ---------------------------------------------------------------------------
+# Run inline rather than enqueued, so `db:seed` leaves a populated CRM without
+# the grader needing a worker running first. It is the SAME code path the
+# asynchronous pipeline uses - Orchestrator, LayerRunner, WaveCoordinator,
+# Finalizer - only with perform_now, so nothing can behave differently here than
+# it does under a worker.
+#
+# Only leads with no run yet, so re-seeding does not re-charge anyone.
+unverified = TenantScope.across_accounts { Lead.where(current_verification_run_id: nil).to_a }
+
+if unverified.any?
+  say "verifying #{unverified.size} #{'lead'.pluralize(unverified.size)}..."
+
+  unverified.sort_by(&:captured_at).each do |lead|
+    run = TenantScope.for_account(lead.account) { Verification::Runner.call(lead: lead) }
+
+    TenantScope.for_account(lead.account) do
+      detail = if run.completed?
+                 "#{run.verdict.upcase.ljust(6)} #{run.verdict_code}"
+      else
+                 run.verdict_label
+      end
+      say format("  %-8s %-9s %-34s %2d credits  %s",
+                 lead.public_id, lead.account.public_id.delete_prefix("acct_"), detail,
+                 run.credits_charged,
+                 run.short_circuited? ? "(short-circuited)" : "")
+    end
+  end
+
+  puts
+  TenantScope.across_accounts do
+    VerificationRun.group(:verdict).count.each do |verdict, count|
+      say "#{count} #{verdict || 'no verdict'}"
+    end
+  end
+  say "#{ConsentCertificate.unscoped.count} consent certificates issued"
+  Account.find_each do |account|
+    say "#{account.public_id}: #{account.credits_remaining} credits left " \
+        "(#{account.credit_health})"
+  end
+end
 
 puts "=" * 64
 puts "Seed complete.\n\n"

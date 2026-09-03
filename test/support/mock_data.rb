@@ -7,6 +7,11 @@
 module MockData
   ROOT = Rails.root.join("mock-data")
 
+  PROVIDERS = %w[
+    vpn_proxy anura trustedform blacklist_alliance dnc
+    phone_validation email_validation enrichment voice
+  ].freeze
+
   class << self
     def leads = load_file("leads.json").fetch("leads")
 

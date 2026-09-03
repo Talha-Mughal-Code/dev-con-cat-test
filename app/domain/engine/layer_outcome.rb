@@ -9,9 +9,11 @@ module Engine
   LayerOutcome = Struct.new(:module_key, :state, :assessment, :fail_closed,
                             keyword_init: true) do
     ANSWERED = "completed"
-    # Never spoke, and that is nobody's failure: the buyer did not pay for it, or
-    # it does not apply to this lead. Excluded from coverage entirely.
-    SILENT_STATES = %w[not_enabled not_applicable].freeze
+    # Never spoke, and no evidence is missing as a result: the buyer did not pay
+    # for it, it does not apply to this lead, or the lead was already
+    # dispositively rejected so we chose not to spend credits on it. Excluded
+    # from coverage, and each reported by name.
+    SILENT_STATES = %w[not_enabled not_applicable skipped_hard_stop].freeze
     # Should have spoken and did not. Counts against coverage, and triggers
     # fail-closed handling for the layers that declare it.
     MISSING_STATES = %w[errored timed_out skipped_insufficient_credits pending].freeze

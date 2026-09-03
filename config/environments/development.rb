@@ -1,6 +1,9 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Durable, database-backed jobs. Start a worker with bin/jobs (or use bin/dev).
+  config.active_job.queue_adapter = :solid_queue
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # In the development environment your application's code is reloaded any time

@@ -69,6 +69,12 @@ module Engine
       )
     end
 
+    # Resolve a single layer in isolation. Called by Verification::LayerRunner as
+    # each layer lands, so a row can record its own signal and contribution for
+    # the live panel - and by #call for the final verdict. One implementation,
+    # so a row can never disagree with the verdict that used it.
+    def resolve_layer(outcome) = resolve(outcome)
+
     private
 
     attr_reader :policy
@@ -158,7 +164,8 @@ module Engine
         not_enabled: outcomes.select { |o| o.state == "not_enabled" }.map(&:module_key),
         not_applicable: outcomes.select { |o| o.state == "not_applicable" }.map(&:module_key),
         unavailable: outcomes.select { |o| o.state.in?(%w[errored timed_out]) }.map(&:module_key),
-        skipped_for_credits: outcomes.select { |o| o.state == "skipped_insufficient_credits" }.map(&:module_key)
+        skipped_for_credits: outcomes.select { |o| o.state == "skipped_insufficient_credits" }.map(&:module_key),
+        skipped_after_hard_stop: outcomes.select { |o| o.state == "skipped_hard_stop" }.map(&:module_key)
       }
     end
 
@@ -211,6 +218,17 @@ module Engine
       HardStops::CODES.find { |code| codes.include?(code) } || codes.first
     end
 
+    def coverage_note(contributions)
+      skipped = contributions.keys.select { |o| o.state == "skipped_insufficient_credits" }
+                             .map(&:module_key)
+      return nil if skipped.empty?
+
+      verb = skipped.one? ? "was" : "were"
+      { code: "skipped_for_credits", severity: "constraint",
+        message: "#{skipped.to_sentence} #{verb} not run because the account was out of " \
+                 "credits. The verdict rests on the layers that did run." }
+    end
+
     def build_reasons(value, code, hard_stops, contributions, advisories, caps, weighted_risk)
       reasons = []
 
@@ -237,6 +255,14 @@ module Engine
       caps.each do |cap|
         reasons << { code: cap[:code], severity: "constraint", message: cap[:message] }
       end
+
+      # A layer skipped for want of credits does not cap the verdict - if
+      # coverage still clears the floor and every dispositive check ran, the
+      # evidence supports a verdict. But it must be stated, because a buyer
+      # defending this lead needs to know the check was not the full one they
+      # normally get.
+      skipped = coverage_note(contributions)
+      reasons << skipped if skipped
 
       if reasons.empty?
         reasons << { code: "clean", severity: "info",

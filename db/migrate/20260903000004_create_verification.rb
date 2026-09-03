@@ -41,7 +41,14 @@ class CreateVerification < ActiveRecord::Migration[7.2]
       t.datetime :completed_at
       t.timestamps
 
-      t.check_constraint "status IN ('pending','running','completed'," \
+      # The status column doubles as the concurrency primitive for wave
+      # advancement. Layer jobs run in parallel, so when the last one in a wave
+      # finishes, several could each conclude the wave is over. Instead of a
+      # lock or an extra table, each contender attempts a conditional status
+      # transition (UPDATE ... WHERE status = 'wave_1'); exactly one row is
+      # affected, and that job becomes the one that advances or finalises. See
+      # Verification::WaveCoordinator.
+      t.check_constraint "status IN ('pending','wave_1','wave_2','finalizing','completed'," \
                          "'halted_insufficient_credits','errored')",
                          name: "verification_runs_status_valid"
       t.check_constraint "verdict IS NULL OR verdict IN ('accept','review','reject')",
@@ -72,6 +79,12 @@ class CreateVerification < ActiveRecord::Migration[7.2]
       t.string  :summary
       t.text    :payload            # raw vendor response, retained as evidence
       t.text    :breakdown          # per-sub-provider detail for consensus layers
+      # The evaluator's findings, in our own vocabulary. Persisted because
+      # layers execute in separate jobs and possibly separate processes: the
+      # finaliser has to rebuild every layer's outcome from the database rather
+      # than from memory. Storing findings rather than a resolved verdict means
+      # the policy is applied in exactly one place.
+      t.text    :findings, null: false, default: "[]"
       t.integer :credits_charged, null: false, default: 0
       t.integer :wave,            null: false, default: 2
       t.string  :error_class
@@ -81,8 +94,13 @@ class CreateVerification < ActiveRecord::Migration[7.2]
       t.integer  :latency_ms
       t.timestamps
 
+      # skipped_hard_stop is deliberately distinct from the other skips: the
+      # lead was already dispositively rejected by a cheap wave-1 layer, so we
+      # chose not to spend the buyer's credits on the expensive ones. Nothing
+      # failed, and the certificate says so in those words.
       t.check_constraint "state IN ('pending','completed','not_enabled'," \
-                         "'not_applicable','errored','skipped_insufficient_credits','timed_out')",
+                         "'not_applicable','errored','skipped_insufficient_credits'," \
+                         "'skipped_hard_stop','timed_out')",
                          name: "layer_results_state_valid"
       t.check_constraint "signal IS NULL OR signal IN ('pass','warn','fail','info')",
                          name: "layer_results_signal_valid"
