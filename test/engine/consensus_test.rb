@@ -80,7 +80,7 @@ class ConsensusTest < ActiveSupport::TestCase
   test "an armed hard stop rejects regardless of how clean everything else is" do
     outcomes = [
       answered("dnc", findings: [ synthetic_finding(module_key: "dnc", hard_stop_code: "dnc_listed",
-                                                    weight_key: "listed") ], consent_critical: true)
+                                                    weight_key: "listed") ], fail_closed: true)
     ] + (Engine::Registry::MODULE_KEYS - [ "dnc" ]).map { |key| answered(key) }
 
     verdict = verdict_for(outcomes)
@@ -189,9 +189,9 @@ class ConsensusTest < ActiveSupport::TestCase
 
   # --- unavailability: fail open vs fail closed ----------------------------
 
-  test "an unavailable consent-critical layer fails closed and caps at review" do
+  test "an unavailable fail-closed layer fails closed and caps at review" do
     outcomes = [
-      unanswered("trustedform", "errored", consent_critical: true)
+      unanswered("trustedform", "errored", fail_closed: true)
     ] + (Engine::Registry::MODULE_KEYS - [ "trustedform" ]).map { |key| answered(key) }
 
     verdict = verdict_for(outcomes)
@@ -199,7 +199,7 @@ class ConsensusTest < ActiveSupport::TestCase
     # Everything else passed, so the score alone would accept.
     assert_in_delta 0.0, verdict.weighted_risk, 0.0001
     assert_equal "review", verdict.value
-    assert_equal "consent_critical_layer_unavailable", verdict.code
+    assert_equal "fail_closed_layer_unavailable", verdict.code
   end
 
   test "an unavailable non-critical layer fails open and still accepts" do
@@ -217,7 +217,7 @@ class ConsensusTest < ActiveSupport::TestCase
     # A vendor outage is not the lead's fault. Rejecting on it would destroy
     # good leads the buyer has already paid for.
     outcomes = Engine::Registry::MODULE_KEYS.map do |key|
-      unanswered(key, "errored", consent_critical: %w[trustedform dnc].include?(key))
+      unanswered(key, "errored", fail_closed: %w[trustedform dnc].include?(key))
     end
 
     verdict = verdict_for(outcomes)
@@ -233,7 +233,7 @@ class ConsensusTest < ActiveSupport::TestCase
     verdict = verdict_for(answered_layers + missing_layers)
 
     assert_equal "review", verdict.value
-    assert_includes [ "insufficient_coverage", "consent_critical_layer_unavailable" ], verdict.code
+    assert_includes [ "insufficient_coverage", "fail_closed_layer_unavailable" ], verdict.code
     assert_operator verdict.coverage[:ratio], :<, 0.5
   end
 

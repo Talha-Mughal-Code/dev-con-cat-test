@@ -12,7 +12,7 @@ module EngineHarness
   # Layers with no vendor behind them: always available to every account.
   FIRST_PARTY_MODULES = %w[capture_behaviour].freeze
 
-  CONSENT_CRITICAL = %w[trustedform dnc blacklist_alliance duplicate_detection].freeze
+  FAIL_CLOSED = %w[trustedform dnc blacklist_alliance duplicate_detection].freeze
 
   def build_lead_context(lead_data, overrides = {})
     Engine::LeadContext.new(
@@ -66,16 +66,16 @@ module EngineHarness
     enabled ||= enabled_modules_for(lead_data["account_id"])
 
     Engine::Registry::MODULE_KEYS.map do |module_key|
-      consent_critical = CONSENT_CRITICAL.include?(module_key)
+      fail_closed = FAIL_CLOSED.include?(module_key)
 
       unless enabled.include?(module_key)
         next Engine::LayerOutcome.new(module_key: module_key, state: "not_enabled",
-                                      consent_critical: consent_critical)
+                                      fail_closed: fail_closed)
       end
 
       if unavailable.include?(module_key)
         next Engine::LayerOutcome.new(module_key: module_key, state: "errored",
-                                      consent_critical: consent_critical)
+                                      fail_closed: fail_closed)
       end
 
       evaluator = Engine::Registry.for(module_key)
@@ -83,11 +83,11 @@ module EngineHarness
 
       unless evaluator.applicable?(payload, context)
         next Engine::LayerOutcome.new(module_key: module_key, state: "not_applicable",
-                                      consent_critical: consent_critical)
+                                      fail_closed: fail_closed)
       end
 
       Engine::LayerOutcome.new(
-        module_key: module_key, state: "completed", consent_critical: consent_critical,
+        module_key: module_key, state: "completed", fail_closed: fail_closed,
         assessment: evaluator.call(payload, context)
       )
     end
@@ -114,16 +114,16 @@ module SyntheticOutcomes
                         hard_stop_code: hard_stop_code, detail: detail, advisory: advisory)
   end
 
-  def answered(module_key, findings: [], consent_critical: false, summary: "ok")
+  def answered(module_key, findings: [], fail_closed: false, summary: "ok")
     Engine::LayerOutcome.new(
-      module_key: module_key, state: "completed", consent_critical: consent_critical,
+      module_key: module_key, state: "completed", fail_closed: fail_closed,
       assessment: Engine::Assessment.new(module_key: module_key, findings: Array(findings),
                                          summary: summary, breakdown: {})
     )
   end
 
-  def unanswered(module_key, state, consent_critical: false)
+  def unanswered(module_key, state, fail_closed: false)
     Engine::LayerOutcome.new(module_key: module_key, state: state,
-                             consent_critical: consent_critical)
+                             fail_closed: fail_closed)
   end
 end

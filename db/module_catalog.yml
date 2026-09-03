@@ -1,0 +1,133 @@
+# The detection-layer catalog: reference data, so it lives as data.
+#
+# Loaded by db/seeds.rb and by the test suite, so tests exercise exactly the
+# configuration production runs on. `default_cost_in_credits` mirrors
+# mock-data/accounts.json's module_costs_in_credits, and the seed raises if the
+# two ever drift apart.
+#
+# Fields that are platform policy rather than vendor fact:
+#
+#   wave              1 = a cheap, dispositive check; 2 = a weighted signal.
+#                     Wave 1 runs first so a hard stop can short-circuit the
+#                     expensive layers and save the buyer credits.
+#   fail_closed       If enabled but unable to answer, cap the verdict at REVIEW
+#                     rather than accept. We do not vouch for what we did not
+#                     check.
+#   hard_stop_capable Whether this layer can ever produce a dispositive finding.
+#                     Informational - the authoritative list is
+#                     Engine::HardStops.
+modules:
+  - key: capture_behaviour
+    name: Capture behaviour
+    question: How was this form actually filled in?
+    # The one layer with no vendor behind it: our own pixel telemetry. Free, and
+    # it can never be unavailable, so there is nothing for an account to
+    # subscribe to - it is enabled for everyone.
+    default_cost_in_credits: 0
+    wave: 1
+    fail_closed: false
+    hard_stop_capable: false
+    in_development: false
+    position: 0
+
+  - key: vpn_proxy
+    name: VPN / Proxy
+    question: Is the visitor hiding behind a VPN, proxy or Tor, and did their IP change between visiting and submitting?
+    default_cost_in_credits: 1
+    wave: 2
+    fail_closed: false
+    hard_stop_capable: false
+    in_development: true
+    position: 1
+
+  - key: anura
+    name: Anura
+    question: Is this a bot, malware or a human fraud farm rather than real traffic?
+    default_cost_in_credits: 2
+    wave: 1
+    fail_closed: false
+    hard_stop_capable: true
+    in_development: false
+    position: 2
+
+  - key: trustedform
+    name: TrustedForm
+    question: Does a retained consent certificate exist, and does it match this lead's claim?
+    default_cost_in_credits: 1
+    wave: 1
+    fail_closed: true
+    hard_stop_capable: true
+    in_development: false
+    position: 3
+
+  - key: blacklist_alliance
+    name: Litigator screening
+    question: Is this a known serial TCPA litigator or professional plaintiff?
+    default_cost_in_credits: 2
+    wave: 1
+    fail_closed: true
+    hard_stop_capable: true
+    in_development: false
+    position: 4
+
+  - key: dnc
+    name: DNC / Callback
+    question: Is the number on a Do-Not-Call list, and is the callback window open?
+    default_cost_in_credits: 1
+    wave: 1
+    fail_closed: true
+    hard_stop_capable: true
+    in_development: false
+    position: 5
+
+  - key: phone_validation
+    name: Phone consensus
+    question: Do three independent phone providers agree the number is real and reachable?
+    default_cost_in_credits: 3
+    wave: 2
+    fail_closed: false
+    hard_stop_capable: false
+    in_development: false
+    position: 6
+
+  - key: email_validation
+    name: Email consensus
+    question: Do two independent email providers agree the address is deliverable?
+    default_cost_in_credits: 2
+    wave: 2
+    fail_closed: false
+    hard_stop_capable: false
+    in_development: false
+    position: 7
+
+  - key: enrichment
+    name: Data enrichment
+    question: Do two enrichment sources agree on the identity, and does it match the lead?
+    default_cost_in_credits: 4
+    wave: 2
+    fail_closed: false
+    hard_stop_capable: false
+    in_development: false
+    position: 8
+
+  - key: duplicate_detection
+    name: Duplicate detection
+    question: Is this lead already in this buyer's CRM, so they would pay twice?
+    default_cost_in_credits: 1
+    # Fails closed for a commercial reason rather than a legal one: accepting a
+    # lead we could not check for duplicates risks charging the buyer twice.
+    wave: 1
+    fail_closed: true
+    hard_stop_capable: true
+    in_development: false
+    position: 9
+
+  - key: voice
+    name: Voice AI
+    question: For voice leads, is this a reused voice actor or a synthetic voice?
+    default_cost_in_credits: 5
+    wave: 2
+    fail_closed: false
+    hard_stop_capable: true
+    in_development: true
+    position: 10

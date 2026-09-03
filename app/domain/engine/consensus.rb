@@ -34,8 +34,8 @@ module Engine
   # Two things cap an ACCEPT down to REVIEW, and neither can ever cause a
   # REJECT, because a vendor outage is not the lead's fault:
   #
-  #   * a consent-critical layer that was enabled but could not answer
-  #     (fail closed - we will not vouch for consent we did not check)
+  #   * a fail-closed layer that was enabled but could not answer
+  #     (we will not vouch for something we did not check)
   #   * coverage below the policy floor
   #     (we will not vouch for a lead we barely checked)
   class Consensus
@@ -165,12 +165,12 @@ module Engine
     def capping_constraints(outcomes, coverage)
       caps = []
 
-      missing_critical = outcomes.select { |o| o.consent_critical? && o.expected? && o.missing? }
-      if missing_critical.any?
+      missing_required = outcomes.select { |o| o.fail_closed? && o.expected? && o.missing? }
+      if missing_required.any?
         caps << {
-          code: "consent_critical_layer_unavailable",
-          message: "#{missing_critical.map(&:module_key).to_sentence} could not be checked. " \
-                   "Consent-critical layers fail closed, so this lead cannot be accepted."
+          code: "fail_closed_layer_unavailable",
+          message: "#{missing_required.map(&:module_key).to_sentence} could not be checked. " \
+                   "That layer fails closed, so this lead cannot be accepted."
         }
       end
 

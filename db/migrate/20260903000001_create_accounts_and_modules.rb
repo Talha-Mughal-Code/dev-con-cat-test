@@ -39,9 +39,13 @@ class CreateAccountsAndModules < ActiveRecord::Migration[7.2]
       # the weighted signals. Running wave 1 first lets a hard stop short
       # circuit the expensive layers and save the buyer credits.
       t.integer :wave,                    null: false, default: 2
-      # When a consent-critical layer is enabled but unavailable we fail closed
-      # (cap at REVIEW); other layers fail open with reduced coverage.
-      t.boolean :consent_critical,        null: false, default: false
+      # When a fail-closed layer is enabled but cannot answer, the lead is
+      # capped at REVIEW rather than accepted - we will not vouch for something
+      # we did not check. Everything else fails open, scoring without it and
+      # recording the coverage gap. Named for the behaviour rather than the
+      # reason, because the reasons differ: TrustedForm, DNC and litigator
+      # screening are legal exposure, duplicate detection is the buyer's money.
+      t.boolean :fail_closed,            null: false, default: false
       t.boolean :hard_stop_capable,       null: false, default: false
       t.boolean :in_development,          null: false, default: false
       t.integer :position,                null: false, default: 0

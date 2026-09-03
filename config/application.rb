@@ -51,5 +51,12 @@ module SuperPixel
     # land one at a time - so the mock gateway sleeps within this range. Zero in
     # the test environment, where it would only slow the suite down.
     config.x.provider_latency_ms = (120..600)
+
+    # SQL rather than Ruby schema dumps. The consent-certificate and credit
+    # ledger immutability triggers are the point: Rails' Ruby schema dumper
+    # cannot express a trigger, so with :ruby the test database would silently
+    # lack the very guarantees the migrations exist to create. structure.sql
+    # keeps them, so tests exercise the same constraints production has.
+    config.active_record.schema_format = :sql
   end
 end

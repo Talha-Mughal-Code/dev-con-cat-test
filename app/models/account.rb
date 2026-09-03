@@ -43,8 +43,10 @@ class Account < ApplicationRecord
   # until there is enough history for the average to mean anything.
   def daily_burn_rate(window: 7.days)
     since = window.ago
-    spent = credit_ledger_entries.where(entry_type: "debit").where(occurred_at: since..).sum(:amount).abs
-    days  = [ (Time.current - [ since, created_at ].max) / 1.day, 1.0 ].max
+    spent = scoped_to_self do
+      credit_ledger_entries.debits.where(occurred_at: since..).sum(:amount).abs
+    end
+    days = [ (Time.current - [ since, created_at ].max) / 1.day, 1.0 ].max
     measured = spent / days
     measured.positive? ? measured.round : baseline_daily_burn
   end
@@ -76,10 +78,12 @@ class Account < ApplicationRecord
 
   # module_key => cost in credits, for the layers this account actually pays for.
   def enabled_module_costs
-    account_modules.includes(:detection_module).each_with_object({}) do |am, memo|
-      next unless am.enabled?
+    scoped_to_self do
+      account_modules.includes(:detection_module).each_with_object({}) do |am, memo|
+        next unless am.enabled?
 
-      memo[am.detection_module.key] = am.cost_in_credits
+        memo[am.detection_module.key] = am.cost_in_credits
+      end
     end
   end
 
@@ -90,6 +94,18 @@ class Account < ApplicationRecord
   # An account's own policy if it has overridden one, otherwise the platform
   # default. Accounts inherit rather than each carrying a copy, so a platform
   # policy fix reaches every account that has not deliberately diverged.
+  # Account is the tenant boundary, so it is allowed to read its own
+  # tenant-scoped children - but it still has to say so. Without this, a
+  # super_admin iterating accounts on the platform dashboard would trip the
+  # tenant guard, which is the guard working correctly rather than a nuisance:
+  # the read is legitimate, so it is made explicit here instead of being
+  # permitted everywhere.
+  def scoped_to_self(&block)
+    return block.call if Current.account_id == id
+
+    TenantScope.for_account(self, &block)
+  end
+
   def active_consensus_policy
     consensus_policies.where(active: true).order(version: :desc).first ||
       ConsensusPolicy.platform_default

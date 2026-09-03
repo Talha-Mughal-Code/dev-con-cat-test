@@ -237,14 +237,19 @@ class ConsensusPolicy < ApplicationRecord
       }
     },
 
-    # What to do when a layer is enabled but could not answer. Consent-critical
-    # layers fail CLOSED (cap at REVIEW - we will not vouch for consent we could
-    # not check) and the rest fail OPEN (score without them, record the gap).
-    # Neither ever fails to REJECT: a vendor outage is not the lead's fault, and
-    # rejecting on it would destroy good leads the buyer has already paid for.
+    # What happens when a layer is enabled but could not answer. Which layers
+    # fail closed is a property of the module (detection_modules.fail_closed),
+    # not of the policy - it follows from what the layer is for, so it is not
+    # something a buyer should be able to switch off per-account. Recorded here
+    # for documentation.
+    #
+    # Neither mode ever fails to REJECT: a vendor outage is not the lead's
+    # fault, and rejecting on it would destroy good leads the buyer has already
+    # paid for. Fail-closed caps at REVIEW; fail-open scores without the layer
+    # and records the coverage gap.
     "unavailable_handling" => {
-      "default" => "fail_open",
-      "consent_critical" => "fail_closed"
+      "fail_open" => "score without the layer, record the gap",
+      "fail_closed" => "cap the verdict at REVIEW"
     }
   }.freeze
 
