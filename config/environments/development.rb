@@ -20,6 +20,18 @@ Rails.application.configure do
   # Enable server timing.
   config.server_timing = true
 
+  # no-store for everything under public/, and set OUTSIDE the caching toggle
+  # below so it always applies.
+  #
+  # public/ serves super-pixel.js, and a cached pixel is a pixel you cannot
+  # iterate on: an edit appears to do nothing until the browser decides to
+  # revalidate. Rails' generated setting for this sits inside the
+  # `caching-dev.txt` branch, so by default NO cache header is sent at all and
+  # browsers fall back to heuristic caching off Last-Modified - which is how a
+  # fixed pixel kept behaving like the broken one for long enough to be
+  # thoroughly confusing.
+  config.public_file_server.headers = { "cache-control" => "no-store" }
+
   # Enable/disable caching. By default caching is disabled.
   # Run rails dev:cache to toggle caching.
   if Rails.root.join("tmp/caching-dev.txt").exist?
@@ -27,7 +39,6 @@ Rails.application.configure do
     config.action_controller.enable_fragment_cache_logging = true
 
     config.cache_store = :memory_store
-    config.public_file_server.headers = { "Cache-Control" => "public, max-age=#{2.days.to_i}" }
   else
     config.action_controller.perform_caching = false
 

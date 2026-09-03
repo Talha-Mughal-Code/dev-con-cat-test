@@ -26,6 +26,16 @@ Rails.application.configure do
   # Disable serving static files from `public/`, relying on NGINX/Apache to do so instead.
   # config.public_file_server.enabled = false
 
+  # The pixel is a third-party script on buyers' landing pages, so its cache
+  # lifetime is also the time it takes a fix to reach them. Five minutes with
+  # revalidation: long enough to spare the origin real traffic, short enough
+  # that a correction propagates while someone is still watching. A
+  # fingerprinted asset would be wrong here - the whole point is that buyers
+  # paste one stable URL and never touch it again.
+  config.public_file_server.headers = {
+    "cache-control" => "public, max-age=300, must-revalidate"
+  }
+
   # Compress CSS using a preprocessor.
   # config.assets.css_compressor = :sass
 

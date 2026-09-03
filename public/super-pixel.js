@@ -55,16 +55,34 @@
   }
 
   // --- a tiny event bus, so the host page can render activity ---------------
+  //
+  // The bus keeps a HISTORY as well as a listener list, because the tag is
+  // loaded async and therefore races the host page's inline script. Whichever
+  // wins, the page must end up with every event - including the ones emitted
+  // before it subscribed. Without the history, a page that lost the race
+  // silently rendered nothing at all, forever, which is exactly the failure
+  // this pixel exists not to have.
   var listeners = [];
+  var history = [];
+  // A run emits on the order of fifteen events; the cap is only there so a
+  // long-lived single-page app cannot grow this without bound.
+  var HISTORY_LIMIT = 200;
 
   function emit(event) {
     if (CONFIG.debug) log(event);
+    history.push(event);
+    if (history.length > HISTORY_LIMIT) history.shift();
+
     for (var i = 0; i < listeners.length; i++) {
-      try {
-        listeners[i](event);
-      } catch (e) {
-        /* a page's listener must never be able to break capture */
-      }
+      deliver(listeners[i], event);
+    }
+  }
+
+  function deliver(listener, event) {
+    try {
+      listener(event);
+    } catch (e) {
+      /* a page's listener must never be able to break capture */
     }
   }
 
@@ -304,14 +322,41 @@
   }
 
   // --- public API -----------------------------------------------------------
-  window.SuperPixel = {
+  var SuperPixel = {
     config: CONFIG,
     session: SESSION,
+    // Replays everything already emitted, so subscribing late costs nothing.
     onActivity: function (callback) {
       listeners.push(callback);
+      for (var i = 0; i < history.length; i++) {
+        deliver(callback, history[i]);
+      }
     },
     attach: trackForm
   };
+
+  window.SuperPixel = SuperPixel;
+
+  // The ready queue, which is how an async tag is meant to be consumed: the
+  // host page pushes a callback whether or not this script has run yet.
+  //
+  //   (window.SuperPixelQueue = window.SuperPixelQueue || []).push(function (pixel) {
+  //     pixel.onActivity(render);
+  //   });
+  //
+  // Anything queued before we loaded is drained now; anything pushed afterwards
+  // runs immediately. So `if (window.SuperPixel)` - which is only true if the
+  // page happened to win the race - is never the right test, and never needed.
+  var queued = window.SuperPixelQueue || [];
+  window.SuperPixelQueue = {
+    push: function (callback) {
+      deliver(callback, SuperPixel);
+      return 1;
+    }
+  };
+  for (var q = 0; q < queued.length; q++) {
+    deliver(queued[q], SuperPixel);
+  }
 
   function boot() {
     Array.prototype.forEach.call(document.querySelectorAll("form[data-pixel-form]"), trackForm);

@@ -242,8 +242,12 @@
         feed.scrollTop = feed.scrollHeight;
       }
 
-      if (window.SuperPixel) {
-        window.SuperPixel.onActivity(function (evt) {
+      // Subscribe through the ready queue, not `if (window.SuperPixel)`. The tag
+      // is async, so that check is only true when the page happens to win the
+      // race against a cross-origin script fetch - and when it loses, the page
+      // silently renders nothing at all. The queue works either way.
+      (window.SuperPixelQueue = window.SuperPixelQueue || []).push(function (pixel) {
+        pixel.onActivity(function (evt) {
           switch (evt.type) {
             case "session_started":
               live.textContent = "session " + evt.session.session_id.slice(0, 14) + "…";
@@ -289,7 +293,7 @@
               break;
           }
         });
-      }
+      });
     </script>
   </body>
 </html>
