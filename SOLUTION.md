@@ -5,7 +5,7 @@ through eleven fraud and consent detection layers, a consensus engine turns
 their voices into one defensible verdict, and a signed consent certificate is
 issued as evidence.
 
-**184 tests, 660 assertions, all passing.** ~6,200 lines of Ruby, ~1,600 of ERB,
+**192 tests, 693 assertions, all passing.** ~6,200 lines of Ruby, ~1,600 of ERB,
 325 of pixel JavaScript, 19 tables.
 
 ---
@@ -77,6 +77,13 @@ as errored** — the integrity guarantees hold even where the latency does not.
 
 This is the honest cost of a database that needs no setup, and §10 says what I
 would change. It is worth knowing before anyone load-tests it and is surprised.
+
+### If the panel looks stuck
+
+The pixel is served `no-store` in development so an edit takes effect
+immediately. If you had the page open before that was true, your browser may
+still hold the old script — **hard-reload once** (Cmd-Shift-R) and it will pick
+up the current one.
 
 ### Seeing the pixel work
 
