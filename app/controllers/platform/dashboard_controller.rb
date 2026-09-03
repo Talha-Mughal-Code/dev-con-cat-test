@@ -24,7 +24,10 @@ module Platform
         @halted = VerificationRun.where(status: "halted_insufficient_credits").count
         @spend_by_module = CreditLedgerEntry.debits.group(:module_key).sum("-amount")
                                             .sort_by { |_, v| -v }
-        @recent_events = ActivityEvent.newest_first.limit(15).includes(:account)
+        # Loaded eagerly inside the bypass. A lazy relation would be walked
+        # while the template renders, by which point the block has closed and a
+        # platform operator has no ambient tenant context.
+        @recent_events = ActivityEvent.newest_first.limit(15).includes(:account).to_a
       end
 
       @account_stats = @accounts.index_with { |account| stats_for(account) }

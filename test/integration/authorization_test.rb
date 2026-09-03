@@ -222,6 +222,10 @@ class AuthorizationTest < ActionDispatch::IntegrationTest
     assert_difference -> { AdminAccessLog.count }, 1 do
       get platform_account_path(@beta.public_id)
     end
+    # The drill-in must actually render. Asserting only the log would have hidden
+    # a 404 caused by lazy relations escaping a block-scoped tenant context.
+    assert_response :success
+    assert_match(/#{@beta.company_name}/, response.body)
 
     log = AdminAccessLog.newest_first.first
     assert_equal @operator.id, log.user_id
