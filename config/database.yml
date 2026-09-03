@@ -9,6 +9,15 @@
 default: &default
   adapter: sqlite3
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 12) %>
+  # Transactions BEGIN IMMEDIATE (see config/initializers/
+  # sqlite_immediate_transactions.rb), so they queue for the write lock rather
+  # than failing on a lock upgrade, and busy_timeout is how long they will
+  # queue.
+  #
+  # 5s, not more. Transactions here are short, so 5s is already generous - and
+  # a longer timeout sitting underneath Database::Retry's exponential backoff
+  # compounds rather than helps: a 10s timeout under six retries produced
+  # 70-second requests instead of fast failures.
   timeout: 5000
   pragmas:
     journal_mode: wal
@@ -16,12 +25,26 @@ default: &default
     busy_timeout: 5000
     foreign_keys: true
 
+# The queue database is written by Solid Queue's supervisor, dispatcher and
+# worker threads simultaneously, and that contention happens inside the gem
+# where the application's own retry helper cannot reach it. So it gets a much
+# longer busy_timeout: SQLite will wait rather than raise, which is the right
+# trade for a queue where a few hundred milliseconds of delay costs nothing.
+queue: &queue
+  <<: *default
+  timeout: 20000
+  pragmas:
+    journal_mode: wal
+    synchronous: normal
+    busy_timeout: 20000
+    foreign_keys: true
+
 development:
   primary:
     <<: *default
     database: storage/development.sqlite3
   queue:
-    <<: *default
+    <<: *queue
     database: storage/development_queue.sqlite3
     migrations_paths: db/queue_migrate
 
@@ -30,7 +53,7 @@ test:
     <<: *default
     database: storage/test.sqlite3
   queue:
-    <<: *default
+    <<: *queue
     database: storage/test_queue.sqlite3
     migrations_paths: db/queue_migrate
 
@@ -39,6 +62,6 @@ production:
     <<: *default
     database: storage/production.sqlite3
   queue:
-    <<: *default
+    <<: *queue
     database: storage/production_queue.sqlite3
     migrations_paths: db/queue_migrate

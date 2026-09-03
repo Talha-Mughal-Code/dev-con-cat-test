@@ -20,7 +20,14 @@
 # Any libraries that use a connection pool or another resource pool should
 # be configured to provide at least as many connections as the number of
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
-threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
+# 8 rather than Rails' default 3, because this app holds long-lived
+# Server-Sent Events connections: every open activity panel - the demo funnel,
+# and any lead detail page for a lead still being verified - occupies one Puma
+# thread for up to two minutes. With three threads, two browser tabs plus one
+# ordinary request saturates the server. This is the concrete cost of the SSE
+# choice, and it is why SOLUTION.md says the answer at real scale is pubsub
+# behind an evented server rather than a bigger thread pool.
+threads_count = ENV.fetch("RAILS_MAX_THREADS", 8)
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.

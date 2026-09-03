@@ -24,11 +24,27 @@ module Database
   # necessary - which is the honest trade-off for choosing a zero-setup database.
   module Retry
     CONTENTION = /database is locked|database table is locked|SQLITE_BUSY|busy/i
-    MAX_ATTEMPTS = 6
-    BASE_DELAY = 0.02
+    # A BACKSTOP, not the primary mechanism. BEGIN IMMEDIATE plus busy_timeout
+    # means SQLite now queues for the write lock instead of refusing to upgrade
+    # one, so reaching this code at all means a transaction waited out the full
+    # busy_timeout - a real overload rather than a momentary collision. Retrying
+    # such a case many times with exponential backoff only turns a fast failure
+    # into a slow one, so the budget is deliberately small.
+    MAX_ATTEMPTS = 3
+    BASE_DELAY = 0.05
 
     class << self
       def on_contention(attempts: MAX_ATTEMPTS)
+        # RE-ENTRANT ON PURPOSE. These blocks nest - a layer's row and its
+        # activity event share a transaction, and the recorder wraps its own
+        # write too - and nesting retries is worse than useless. The budgets
+        # multiply (three attempts inside three attempts, each willing to wait
+        # out a 5s busy_timeout, is over a minute of waiting), and retrying an
+        # inner block is pointless anyway because the enclosing transaction is
+        # already doomed. Only the outermost block retries.
+        return yield if Thread.current[:database_retry_depth].to_i.positive?
+
+        Thread.current[:database_retry_depth] = 1
         tries = 0
 
         begin
@@ -42,6 +58,8 @@ module Database
           sleep(BASE_DELAY * (2**(tries - 1)) * (0.5 + rand))
           retry
         end
+      ensure
+        Thread.current[:database_retry_depth] = nil
       end
 
       def contention?(error)

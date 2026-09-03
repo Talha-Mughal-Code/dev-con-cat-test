@@ -1,12 +1,21 @@
+# Tuned for SQLite rather than left at the Postgres-oriented defaults.
+#
+# Layer jobs run in parallel on purpose - vendor calls are I/O-bound - but SQLite
+# permits one writer at a time, so the useful concurrency is bounded by write
+# contention rather than by CPU. Three threads polling every 100ms spent more
+# time colliding than working; two threads at 200ms move the same eleven layers
+# through just as fast and stop Solid Queue's own supervisor threads fighting the
+# workers for the write lock.
 default: &default
   dispatchers:
     - polling_interval: 1
       batch_size: 500
   workers:
+    # "*" covers both the verification and maintenance queues.
     - queues: "*"
-      threads: 3
+      threads: 2
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
-      polling_interval: 0.1
+      polling_interval: 0.2
 
 development:
   <<: *default

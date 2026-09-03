@@ -1,15 +1,23 @@
-# examples:
-#   periodic_cleanup:
-#     class: CleanSoftDeletedRecordsJob
-#     queue: background
-#     args: [ 1000, { batch_size: 500 } ]
-#     schedule: every hour
-#   periodic_cleanup_with_command:
-#     command: "SoftDeletedRecord.due.delete_all"
-#     priority: 2
-#     schedule: at 5am every day
+# Scheduled maintenance, run by Solid Queue's dispatcher.
+default: &default
+  # Rescues verification runs that stopped moving - a layer job that exhausted
+  # its retries, or a worker killed mid-flight - so an abandoned run resolves to
+  # a defensible verdict instead of sitting in wave_1 forever with a lead nobody
+  # ever decides about. See Verification::StaleRunSweeper for why it finalises
+  # rather than retries.
+  sweep_stale_verification_runs:
+    class: Verification::SweepStaleRunsJob
+    queue: maintenance
+    schedule: every 5 minutes
+
+development:
+  <<: *default
+
+test:
+  <<: *default
 
 production:
+  <<: *default
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12

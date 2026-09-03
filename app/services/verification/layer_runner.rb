@@ -34,6 +34,11 @@ module Verification
 
         charge = charge_for_layer(result)
 
+        # The row and the event a viewer sees for it are one logical write, so
+        # they share one transaction. Three separate transactions per layer -
+        # charge, row, event - meant thirty-three lock acquisitions per lead
+        # under SQLite's single writer, which is what made concurrent ingestion
+        # stall.
         write! do
           result.update!(
             state: "completed",
@@ -48,7 +53,10 @@ module Verification
             latency_ms: elapsed_ms(started),
               started_at: started, completed_at: Time.current
           )
+          bump_run_credits(result)
+          Activity::Recorder.layer_result(result)
         end
+        return result
       rescue Providers::LayerUnavailable => e
         # The layer is enabled and applicable but could not answer. Recorded as a
         # distinct state so the policy's fail-open / fail-closed handling can act
@@ -97,7 +105,13 @@ module Verification
     attr_reader :run, :module_key, :account
 
     def write!(&block)
-      Database::Retry.on_contention(&block)
+      Database::Retry.on_contention { ActiveRecord::Base.transaction(&block) }
+    end
+
+    def bump_run_credits(result)
+      return unless result.credits_charged.positive?
+
+      run.increment!(:credits_charged, result.credits_charged)
     end
 
     # Conditional claim: only a row still pending is taken, and taking it is a

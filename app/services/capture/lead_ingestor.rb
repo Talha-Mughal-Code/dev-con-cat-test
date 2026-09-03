@@ -26,12 +26,25 @@ module Capture
       TenantScope.for_account(pixel.account) do
         session = find_session
         lead = build_lead(session)
-        lead.save!
 
-        session&.update!(submit_ip: ip, submitted_at: lead.submitted_at,
-                         interactions: interactions, interaction_count: interactions.size)
-
-        Activity::Recorder.lead_received(lead)
+        # The lead, its session's submit-side facts, and the event announcing it
+        # are one logical write. Sharing a transaction means fewer lock
+        # acquisitions under SQLite's single writer, and means a lead can never
+        # exist without the visit context the VPN layer needs to compare IPs.
+        # A larger retry budget than the default, and deliberately so: this is
+        # the one write in the system where losing the race means losing a
+        # LEAD. A buyer would far rather this endpoint took two seconds than
+        # dropped a paid-for capture, so ingestion is allowed to wait much
+        # longer than, say, an activity event is.
+        Database::Retry.on_contention(attempts: 10) do
+          ActiveRecord::Base.transaction do
+            lead.save!
+            session&.update!(submit_ip: ip, submitted_at: lead.submitted_at,
+                             interactions: interactions,
+                             interaction_count: interactions.size)
+            Activity::Recorder.lead_received(lead)
+          end
+        end
         # Enqueued rather than run inline: the visitor's browser is waiting on
         # this response, and it must not block on eleven vendor calls.
         Verification::StartJob.perform_later(lead.id)

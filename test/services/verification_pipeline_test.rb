@@ -313,4 +313,73 @@ class VerificationPipelineTest < ActiveSupport::TestCase
       assert phone.latency_ms.present?
     end
   end
+
+  # --- abandoned runs -------------------------------------------------------
+
+  test "a run abandoned mid-flight is swept to a defensible verdict, not left hanging" do
+    # Found by load testing: a layer job can exhaust its retries under heavy
+    # write contention, leaving the run in wave_1 forever - no verdict, no
+    # certificate, and a lead the buyer paid to capture that nobody decides on.
+    account, lead = build_scenario("L-1001")
+    run = verify!(lead)
+
+    # Rewind it into the state an abandoned run is in.
+    TenantScope.for_account(account) do
+      run.layer_results.where(module_key: %w[phone_validation enrichment])
+         .update_all(state: "pending", signal: nil, credits_charged: 0)
+      run.update_columns(status: "wave_2", verdict: nil, verdict_code: nil,
+                         completed_at: nil, created_at: 30.minutes.ago)
+      run.consent_certificate&.delete
+    end
+
+    swept = Verification::StaleRunSweeper.call
+
+    assert_equal [ run.id ], swept.map(&:id)
+    run.reload
+    assert_equal "completed", run.status
+    assert run.verdict.present?, "a swept run must reach a verdict it can defend"
+
+    TenantScope.for_account(account) do
+      # The layers that never answered say so - truthfully - and feed the normal
+      # fail-open / fail-closed handling rather than inventing new behaviour.
+      assert_equal 2, run.layer_results.where(state: "timed_out").count
+      assert_equal 0, run.layer_results.where(state: "pending").count
+      assert run.consent_certificate.present?
+    end
+  end
+
+  test "the sweeper leaves a run that is merely young alone" do
+    account, lead = build_scenario("L-1001")
+    run = verify!(lead)
+
+    TenantScope.for_account(account) do
+      run.update_columns(status: "wave_2", verdict: nil, verdict_code: nil,
+                         completed_at: nil, created_at: 1.minute.ago)
+    end
+
+    assert_empty Verification::StaleRunSweeper.call
+    assert_equal "wave_2", run.reload.status
+  end
+
+  test "a swept run cannot silently accept a lead most of whose layers never ran" do
+    # The rule that makes sweeping safe: it finalises on the evidence that
+    # arrived, and thin evidence cannot produce an ACCEPT.
+    account, lead = build_scenario("L-1001")
+    run = verify!(lead)
+
+    TenantScope.for_account(account) do
+      # Only the cheap first-party layer ever answered.
+      run.layer_results.where.not(module_key: "capture_behaviour")
+         .where(state: "completed")
+         .update_all(state: "pending", signal: nil, credits_charged: 0)
+      run.update_columns(status: "wave_1", verdict: nil, verdict_code: nil,
+                         completed_at: nil, created_at: 30.minutes.ago)
+      run.consent_certificate&.delete
+    end
+
+    Verification::StaleRunSweeper.call
+
+    assert_equal "review", run.reload.verdict
+    assert_includes %w[fail_closed_layer_unavailable insufficient_coverage], run.verdict_code
+  end
 end

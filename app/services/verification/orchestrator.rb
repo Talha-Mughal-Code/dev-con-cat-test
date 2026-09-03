@@ -25,14 +25,19 @@ module Verification
       TenantScope.for_account(account) do
         plans, budget = Planner.new(lead: lead, account: account, policy: policy).call
 
-        run = VerificationRun.create!(
-          lead: lead, consensus_policy: policy, status: "pending",
-          credits_estimated: budget[:estimated],
-          attempt: lead.verification_runs.count + 1,
-          started_at: Time.current
-        )
-        create_layer_results!(run, plans)
-        lead.update!(current_verification_run: run)
+        # The run, its layer rows and the lead pointer are one logical write, so
+        # they share one transaction - fewer lock acquisitions, and a run can
+        # never exist without the rows describing what it planned to do.
+        ActiveRecord::Base.transaction do
+          run = VerificationRun.create!(
+            lead: lead, consensus_policy: policy, status: "pending",
+            credits_estimated: budget[:estimated],
+            attempt: lead.verification_runs.count + 1,
+            started_at: Time.current
+          )
+          create_layer_results!(run, plans)
+          lead.update!(current_verification_run: run)
+        end
 
         Activity::Recorder.run_started(run, planned: plans.map { |p| plan_summary(p) })
 
@@ -54,14 +59,25 @@ module Verification
 
     attr_reader :lead, :account, :policy, :perform_now
 
+    # One transaction for all eleven rows rather than one each. Under SQLite's
+    # single writer that is the difference between eleven queued lock
+    # acquisitions and one - and with several leads arriving at once, it is the
+    # difference between an ingestion endpoint that responds in tens of
+    # milliseconds and one that stalls for seconds.
     def create_layer_results!(run, plans)
-      plans.each do |plan|
-        run.layer_results.create!(
-          account: account, detection_module: plan.detection_module,
-          module_key: plan.module_key, state: plan.state, wave: plan.wave,
-          summary: silent_summary(plan)
-        )
+      ActiveRecord::Base.transaction do
+        plans.each do |plan|
+          create_layer_result!(run, plan)
+        end
       end
+    end
+
+    def create_layer_result!(run, plan)
+      run.layer_results.create!(
+        account: account, detection_module: plan.detection_module,
+        module_key: plan.module_key, state: plan.state, wave: plan.wave,
+        summary: silent_summary(plan)
+      )
     end
 
     # A blank row invites the reader to assume a pass, so every layer that will
@@ -87,7 +103,7 @@ module Verification
       # An account whose whole stack sits in wave 2 would otherwise stall here.
       return WaveCoordinator.new(run).advance_from(0) if first_wave.empty?
 
-      run.update!(status: "wave_1")
+      Database::Retry.on_contention { run.update!(status: "wave_1") }
       enqueue(run, first_wave.pluck(:module_key))
     end
 
