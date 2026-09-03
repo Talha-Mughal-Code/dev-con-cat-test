@@ -80,15 +80,32 @@ module Providers
         )
       end
 
-      prior_leads = lead.account.leads
-                        .where.not(id: lead.id)
-                        .where(captured_at: ..lead.captured_at)
-      prior_leads = prior_leads.where(
-        "email_normalized = :email OR phone_normalized = :phone",
-        email: context.email_normalized, phone: context.phone_normalized
-      )
+      records + prior_lead_records
+    end
 
-      records + prior_leads.map do |other|
+    # Leads already captured for this account on the same contact details.
+    # Accepted ones are already in the CRM through writeback, so what this adds
+    # is the in-flight and under-review ones: submitting the same person twice
+    # in five minutes is a duplicate the buyer should not pay for twice, even
+    # though nothing is in the CRM yet.
+    #
+    # REJECTED leads are excluded, deliberately. The buyer never bought one, so
+    # a resubmission is not a double charge - and treating it as a duplicate
+    # would permanently blacklist anyone whose first attempt tripped a layer,
+    # including someone who simply mistyped their email the first time.
+    def prior_lead_records
+      prior = lead.account.leads
+                  .where.not(id: lead.id)
+                  .where(captured_at: ..lead.captured_at)
+                  .where("leads.email_normalized = :email OR leads.phone_normalized = :phone",
+                         email: context.email_normalized, phone: context.phone_normalized)
+                  .left_joins(:current_verification_run)
+                  .where("verification_runs.id IS NULL OR verification_runs.verdict IS NULL " \
+                         "OR verification_runs.verdict <> 'reject'")
+                  .where("verification_runs.id IS NULL OR " \
+                         "verification_runs.status NOT IN ('halted_insufficient_credits', 'errored')")
+
+      prior.map do |other|
         DuplicateMatcher::Record.new(
           reference: other.public_id, email_normalized: other.email_normalized,
           phone_normalized: other.phone_normalized, recorded_at: other.captured_at,

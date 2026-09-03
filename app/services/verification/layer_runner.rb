@@ -34,19 +34,21 @@ module Verification
 
         charge = charge_for_layer(result)
 
-        result.update!(
-          state: "completed",
-          signal: resolution[:signal],
-          hard_stop: resolution[:hard_stops].any?,
-          risk_contribution: resolution[:risk],
-          summary: assessment.summary,
-          payload: payload,
-          breakdown: assessment.breakdown,
-          findings: assessment.findings.map { |f| serialise(f) },
-          credits_charged: charge,
-          latency_ms: elapsed_ms(started),
-          started_at: started, completed_at: Time.current
-        )
+        write! do
+          result.update!(
+            state: "completed",
+            signal: resolution[:signal],
+            hard_stop: resolution[:hard_stops].any?,
+            risk_contribution: resolution[:risk],
+            summary: assessment.summary,
+            payload: payload,
+            breakdown: assessment.breakdown,
+            findings: assessment.findings.map { |f| serialise(f) },
+            credits_charged: charge,
+            latency_ms: elapsed_ms(started),
+              started_at: started, completed_at: Time.current
+          )
+        end
       rescue Providers::LayerUnavailable => e
         # The layer is enabled and applicable but could not answer. Recorded as a
         # distinct state so the policy's fail-open / fail-closed handling can act
@@ -66,18 +68,26 @@ module Verification
           latency_ms: elapsed_ms(started), started_at: started, completed_at: Time.current
         )
       rescue StandardError => e
-        # An unexpected failure in our own code is still an unanswered layer, not
-        # a crashed run. Recorded, reported, and left to the same fail-open /
-        # fail-closed treatment.
+        # A transient database lock is NOT a failed layer. Re-raised so the job
+        # retries, because recording it as errored would let a moment of write
+        # contention downgrade a perfectly good lead through the fail-closed
+        # rule. This distinction is the whole reason the rescue is not blanket.
+        raise if Database::Retry.contention?(e)
+
+        # Anything else genuinely is an unanswered layer rather than a crashed
+        # run. Recorded, reported, and left to the same fail-open / fail-closed
+        # treatment as a vendor outage.
         Rails.logger.error("layer #{module_key} failed for run #{run.id}: #{e.class}: #{e.message}")
-        result.update!(
-          state: "errored", error_class: e.class.name, error_message: e.message,
-          summary: "Layer failed: #{e.class}", credits_charged: 0,
-          latency_ms: elapsed_ms(started), started_at: started, completed_at: Time.current
-        )
+        write! do
+          result.update!(
+            state: "errored", error_class: e.class.name, error_message: e.message,
+            summary: "Layer failed: #{e.class}", credits_charged: 0,
+            latency_ms: elapsed_ms(started), started_at: started, completed_at: Time.current
+          )
+        end
       end
 
-      run.increment!(:credits_charged, result.credits_charged) if result.credits_charged.positive?
+      write! { run.increment!(:credits_charged, result.credits_charged) } if result.credits_charged.positive?
       Activity::Recorder.layer_result(result)
       result
     end
@@ -86,12 +96,18 @@ module Verification
 
     attr_reader :run, :module_key, :account
 
+    def write!(&block)
+      Database::Retry.on_contention(&block)
+    end
+
     # Conditional claim: only a row still pending is taken, and taking it is a
     # single UPDATE. Two workers racing on the same layer cannot both proceed.
     def claim_result
-      claimed = run.layer_results
-                   .where(module_key: module_key, state: "pending")
-                   .update_all(state: "pending", started_at: Time.current, updated_at: Time.current)
+      claimed = write! do
+        run.layer_results
+           .where(module_key: module_key, state: "pending")
+           .update_all(state: "pending", started_at: Time.current, updated_at: Time.current)
+      end
       return nil if claimed.zero?
 
       run.layer_results.find_by(module_key: module_key)

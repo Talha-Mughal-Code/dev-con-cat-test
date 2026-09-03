@@ -176,6 +176,10 @@ CREATE INDEX "index_activity_events_on_lead_id_and_id" ON "activity_events" ("le
 CREATE INDEX "index_activity_events_on_account_id_and_id" ON "activity_events" ("account_id", "id");
 CREATE TABLE IF NOT EXISTS "provider_fixtures" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "provider_key" varchar NOT NULL, "lead_public_id" varchar NOT NULL, "payload" text NOT NULL, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
 CREATE UNIQUE INDEX "index_provider_fixtures_on_provider_key_and_lead_public_id" ON "provider_fixtures" ("provider_key", "lead_public_id");
+CREATE TABLE IF NOT EXISTS "provider_subjects" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "lead_public_id" varchar NOT NULL, "email_normalized" varchar, "phone_normalized" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_provider_subjects_on_lead_public_id" ON "provider_subjects" ("lead_public_id");
+CREATE INDEX "index_provider_subjects_on_email_normalized" ON "provider_subjects" ("email_normalized");
+CREATE INDEX "index_provider_subjects_on_phone_normalized" ON "provider_subjects" ("phone_normalized");
 CREATE TABLE IF NOT EXISTS "admin_access_logs" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "user_id" integer NOT NULL, "account_id" integer, "action" varchar NOT NULL, "path" varchar, "ip" varchar, "occurred_at" datetime(6) NOT NULL, "created_at" datetime(6) NOT NULL, CONSTRAINT "fk_rails_580af68ebd"
 FOREIGN KEY ("user_id")
   REFERENCES "users" ("id")

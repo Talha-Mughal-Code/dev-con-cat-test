@@ -77,8 +77,10 @@ module Verification
     # Elect one job to advance the run. Exactly one caller can move the row out
     # of an advanceable status, and that caller owns what happens next.
     def claim(to:)
-      VerificationRun.where(id: run.id, status: ADVANCEABLE)
-                     .update_all(status: to, updated_at: Time.current) == 1
+      Database::Retry.on_contention do
+        VerificationRun.where(id: run.id, status: ADVANCEABLE)
+                       .update_all(status: to, updated_at: Time.current) == 1
+      end
     end
 
     def enter_wave(wave)
@@ -111,13 +113,15 @@ module Verification
       names = skipped.pluck(:module_key)
       return if names.empty?
 
-      skipped.update_all(
-        state: "skipped_hard_stop",
-        summary: "Not run: the lead was already rejected by a dispositive check, " \
-                 "so these credits were not spent",
-        completed_at: Time.current, updated_at: Time.current
-      )
-      run.update!(short_circuited: true)
+      Database::Retry.on_contention do
+        skipped.update_all(
+          state: "skipped_hard_stop",
+          summary: "Not run: the lead was already rejected by a dispositive check, " \
+                   "so these credits were not spent",
+          completed_at: Time.current, updated_at: Time.current
+        )
+        run.update!(short_circuited: true)
+      end
 
       saved = run.account.enabled_module_costs.slice(*names).values.sum
       Activity::Recorder.record!(

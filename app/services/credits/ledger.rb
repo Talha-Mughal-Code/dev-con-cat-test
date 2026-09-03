@@ -94,42 +94,47 @@ module Credits
         TenantScope.for_account(account) do
           entry = nil
 
-          ActiveRecord::Base.transaction do
-            # Checked inside the transaction so a concurrent duplicate either
-            # finds this row or trips the unique index below.
-            existing = CreditLedgerEntry.find_by(idempotency_key: idempotency_key)
-            next entry = existing if existing
+          # Retried as a whole: idempotency_key makes re-running it safe, and
+          # the conditional UPDATE below re-evaluates against whatever the
+          # winner committed.
+          Database::Retry.on_contention do
+            ActiveRecord::Base.transaction do
+              # Checked inside the transaction so a concurrent duplicate either
+              # finds this row or trips the unique index below.
+              existing = CreditLedgerEntry.find_by(idempotency_key: idempotency_key)
+              next entry = existing if existing
 
-            requested = signed_amount.abs
-            if guard_balance
-              # The whole point: one statement that both tests affordability and
-              # commits the spend. Two concurrent charges cannot both pass,
-              # because the second re-evaluates the predicate against the value
-              # the first committed. A balance can therefore never go negative.
-              affected = Account.where(id: account.id)
-                                .where("monthly_credit_allowance - credits_consumed >= ?", requested)
-                                .update_all([ "credits_consumed = credits_consumed + ?, updated_at = ?",
-                                              requested, Time.current ])
+              requested = signed_amount.abs
+              if guard_balance
+                # The whole point: one statement that both tests affordability and
+                # commits the spend. Two concurrent charges cannot both pass,
+                # because the second re-evaluates the predicate against the value
+                # the first committed. A balance can therefore never go negative.
+                affected = Account.where(id: account.id)
+                                  .where("monthly_credit_allowance - credits_consumed >= ?", requested)
+                                  .update_all([ "credits_consumed = credits_consumed + ?, updated_at = ?",
+                                                requested, Time.current ])
 
-              if affected.zero?
-                raise InsufficientCredits.new(account: account, requested: requested,
-                                              available: account.reload.credits_remaining)
+                if affected.zero?
+                  raise InsufficientCredits.new(account: account, requested: requested,
+                                                available: account.reload.credits_remaining)
+                end
+              else
+                Account.where(id: account.id)
+                       .update_all([ "credits_consumed = credits_consumed + ?, updated_at = ?",
+                                     -signed_amount, Time.current ])
               end
-            else
-              Account.where(id: account.id)
-                     .update_all([ "credits_consumed = credits_consumed + ?, updated_at = ?",
-                                   -signed_amount, Time.current ])
+
+              balance_after = Account.where(id: account.id)
+                                     .pick(Arel.sql("monthly_credit_allowance - credits_consumed"))
+
+              entry = CreditLedgerEntry.create!(
+                account: account, verification_run: verification_run, layer_result: layer_result,
+                entry_type: entry_type, module_key: module_key, amount: signed_amount,
+                balance_after: balance_after, idempotency_key: idempotency_key,
+                description: description, occurred_at: Time.current
+              )
             end
-
-            balance_after = Account.where(id: account.id)
-                                   .pick(Arel.sql("monthly_credit_allowance - credits_consumed"))
-
-            entry = CreditLedgerEntry.create!(
-              account: account, verification_run: verification_run, layer_result: layer_result,
-              entry_type: entry_type, module_key: module_key, amount: signed_amount,
-              balance_after: balance_after, idempotency_key: idempotency_key,
-              description: description, occurred_at: Time.current
-            )
           end
 
           account.reload

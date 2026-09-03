@@ -18,19 +18,23 @@ module Verification
       TenantScope.for_account(account) do
         verdict = Engine::Consensus.new(run.consensus_policy).call(run.engine_outcomes)
 
-        run.update!(
-          status: "completed",
-          verdict: verdict.value,
-          verdict_code: verdict.code,
-          risk_score: verdict.risk,
-          confidence_score: verdict.confidence,
-          reasons: verdict.reasons.map { |r| r.transform_keys(&:to_s) },
-          coverage_applicable: verdict.coverage[:expected],
-          coverage_answered: verdict.coverage[:answered],
-          completed_at: Time.current
-        )
+        Database::Retry.on_contention do
+          run.update!(
+            status: "completed",
+            verdict: verdict.value,
+            verdict_code: verdict.code,
+            risk_score: verdict.risk,
+            confidence_score: verdict.confidence,
+            reasons: verdict.reasons.map { |r| r.transform_keys(&:to_s) },
+            coverage_applicable: verdict.coverage[:expected],
+            coverage_answered: verdict.coverage[:answered],
+            completed_at: Time.current
+          )
+        end
 
-        certificate = Certificates::Issuer.call(run: run, verdict: verdict)
+        certificate = Database::Retry.on_contention do
+          Certificates::Issuer.call(run: run, verdict: verdict)
+        end
         Activity::Recorder.final_verdict(run, verdict)
         record_in_crm!(verdict)
 

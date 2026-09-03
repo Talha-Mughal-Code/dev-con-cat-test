@@ -30,6 +30,28 @@ class CreateActivityAndFixtures < ActiveRecord::Migration[7.2]
     end
     add_index :provider_fixtures, %i[provider_key lead_public_id], unique: true
 
+    # The mock vendors' own subject index: which contact details each seeded
+    # fixture describes.
+    #
+    # This exists so the vendor gateway never has to read Lead rows to recognise
+    # a contact. A real vendor's database is global - Blacklist Alliance knows a
+    # litigator's phone number regardless of which buyer is asking - so
+    # modelling it as tenant data would be wrong twice over: it would make the
+    # lookup account-scoped (and therefore useless), and it would have one
+    # account's leads influencing another's verdicts through a back door.
+    #
+    # Vendor reference data, keyed by contact details, exactly as the real thing
+    # would be.
+    create_table :provider_subjects do |t|
+      t.string :lead_public_id, null: false
+      t.string :email_normalized
+      t.string :phone_normalized
+      t.timestamps
+    end
+    add_index :provider_subjects, :lead_public_id, unique: true
+    add_index :provider_subjects, :email_normalized
+    add_index :provider_subjects, :phone_normalized
+
     # Every cross-account read by a platform operator is recorded. super_admin
     # is a real privilege escalation, so it leaves a trail.
     create_table :admin_access_logs do |t|

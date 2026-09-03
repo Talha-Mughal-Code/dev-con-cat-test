@@ -55,29 +55,32 @@ module Providers
 
     attr_reader :context, :capture_session
 
-    def known_contact = @known_contact ||= @known_contact_finder.call(context)
+    # Returns the fixture subject id (e.g. "L-1005") whose contact details match,
+    # or nil.
+    def known_contact
+      return @known_contact if defined?(@known_contact)
 
+      @known_contact = @known_contact_finder.call(context)
+    end
+
+    # Looks the contact up in the VENDOR's subject index rather than in our lead
+    # table. That distinction matters: reading Lead rows would either be confined
+    # to the asking account by the tenant scope - and so never match - or, if
+    # forced across accounts, would let one buyer's leads shape another buyer's
+    # verdicts. A vendor's database is global and keyed by contact details, so
+    # that is what this queries.
     def default_known_contact_finder(ctx)
-      candidates = []
-      candidates << Lead.where(email_normalized: ctx.email_normalized) if ctx.email_normalized.present?
-      candidates << Lead.where(phone_normalized: ctx.phone_normalized) if ctx.phone_normalized.present?
-      return nil if candidates.empty?
-
-      # Only seeded leads carry fixtures, and never match the lead against
-      # itself.
-      TenantScope.across_accounts do
-        candidates.reduce(:or)
-                  .where(origin: "seed")
-                  .where.not(public_id: ctx.public_id)
-                  .order(:captured_at)
-                  .first
-      end
+      ProviderSubject.matching(email: ctx.email_normalized, phone: ctx.phone_normalized)
+                     .where.not(lead_public_id: ctx.public_id)
+                     .order(:lead_public_id)
+                     .first
+                     &.lead_public_id
     end
 
     def known_contact_payload(provider_key)
       return nil if known_contact.blank?
 
-      ProviderFixture.lookup(provider_key, known_contact.public_id)
+      ProviderFixture.lookup(provider_key, known_contact)
     end
 
     def heuristic_payload(provider_key)

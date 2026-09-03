@@ -197,6 +197,18 @@ PROVIDER_FILES.each do |provider_key|
 end
 say "#{ProviderFixture.count} provider fixtures across #{PROVIDER_FILES.size} vendors"
 
+# The vendors' subject index: which contact details each fixture describes. This
+# is what lets the gateway recognise a known bad actor by phone or email - the
+# way a real vendor does - rather than by our internal lead id, which no vendor
+# would ever have seen.
+load_mock("leads.json").fetch("leads").each do |data|
+  ProviderSubject.find_or_initialize_by(lead_public_id: data.fetch("lead_id")).update!(
+    email_normalized: Lead.normalize_email(data["email"]),
+    phone_normalized: Lead.normalize_phone(data["phone"])
+  )
+end
+say "#{ProviderSubject.count} vendor subject records (matched on phone and email)"
+
 # ---------------------------------------------------------------------------
 # 7. Leads
 # ---------------------------------------------------------------------------

@@ -13,12 +13,14 @@ module Activity
         account ||= lead&.account || verification_run&.account
 
         TenantScope.for_account(account) do
-          ActivityEvent.create!(
-            account: account, lead: lead, verification_run: verification_run,
-            capture_session: capture_session, pixel: pixel || lead&.pixel,
-            kind: kind.to_s, payload: payload.deep_stringify_keys,
-            occurred_at: Time.current
-          )
+          Database::Retry.on_contention do
+            ActivityEvent.create!(
+              account: account, lead: lead, verification_run: verification_run,
+              capture_session: capture_session, pixel: pixel || lead&.pixel,
+              kind: kind.to_s, payload: payload.deep_stringify_keys,
+              occurred_at: Time.current
+            )
+          end
         end
       end
 
