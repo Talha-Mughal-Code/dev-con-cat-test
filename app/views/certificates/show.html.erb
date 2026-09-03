@@ -1,0 +1,129 @@
+<% content_for :title, @certificate.serial %>
+<div class="page-head">
+  <div>
+    <h1>Consent certificate</h1>
+    <p class="muted small"><code><%= @certificate.serial %></code> · issued <%= time_short @certificate.issued_at %></p>
+  </div>
+  <div class="pill-row">
+    <span class="badge <%= @result.valid? ? "b-pass" : "b-fail" %>"><%= @result.status %></span>
+    <%= link_to "Public verification page", public_certificate_path(@certificate.serial),
+                class: "btn ghost small", target: "_blank", rel: "noopener" %>
+  </div>
+</div>
+
+<div class="grid sidebar">
+  <div>
+    <div class="card">
+      <h2>Integrity</h2>
+      <p class="muted small">
+        Recomputed on every view rather than read from a stored flag - a cached
+        "valid" is exactly what someone who edited the row would want.
+      </p>
+      <table>
+        <tbody>
+          <tr>
+            <td>Payload digest</td>
+            <td><span class="badge <%= @result.digest_ok ? "b-pass" : "b-fail" %>"><%= @result.digest_ok ? "matches" : "altered" %></span></td>
+            <td class="small muted">SHA-256 over the canonical JSON body</td>
+          </tr>
+          <tr>
+            <td>Signature</td>
+            <td><span class="badge <%= @result.signature_ok ? "b-pass" : "b-fail" %>"><%= @result.signature_ok ? "valid" : "invalid" %></span></td>
+            <td class="small muted">Ed25519, key <code><%= @certificate.key_id %></code></td>
+          </tr>
+          <tr>
+            <td>Chain</td>
+            <td><span class="badge <%= @result.chain_ok ? "b-pass" : "b-fail" %>"><%= @result.chain_ok ? "intact" : "broken" %></span></td>
+            <td class="small muted"><%= @result.details[:chain] %></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted" style="margin-top:12px">
+        The signature proves this document was not edited. The per-account hash
+        chain additionally proves no certificate was deleted or reordered - the
+        one attack the platform operator would be uniquely placed to attempt.
+      </p>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>What was checked</h2>
+      <div class="layers">
+        <% @layers.each do |layer| %>
+          <div class="layer-row <%= "silent" unless layer["state"] == "completed" %>">
+            <span class="lname"><%= layer["name"] %></span>
+            <span class="ldetail"><%= layer["summary"] %></span>
+            <span class="lcost"><%= "#{layer['credits_charged']} cr" if layer["credits_charged"].to_i.positive? %></span>
+            <%= status_badge layer["signal"] || layer["state"] %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Signed payload</h2>
+      <p class="muted small">The exact bytes the digest was taken over.</p>
+      <pre><%= JSON.pretty_generate(@certificate.payload) %></pre>
+    </div>
+  </div>
+
+  <div>
+    <% payload = @certificate.payload %>
+    <div class="card tight">
+      <h3>Verdict</h3>
+      <div class="verdict-hero <%= payload.dig("verdict", "value") %>">
+        <%= payload.dig("verdict", "value").to_s.upcase %>
+        <span class="sub"><%= payload.dig("verdict", "code")&.humanize %></span>
+      </div>
+      <ul class="reasons" style="margin-top:12px">
+        <% Array(payload.dig("verdict", "reasons")).each do |reason| %>
+          <li class="<%= reason["severity"] %>"><span class="small"><%= reason["message"] %></span></li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Consent evidence</h3>
+      <dl class="kv small">
+        <dt>TrustedForm</dt>
+        <dd><%= link_to_if payload.dig("consent", "trusted_form_cert_url").present?,
+                           truncate(payload.dig("consent", "trusted_form_cert_url").to_s, length: 40),
+                           payload.dig("consent", "trusted_form_cert_url") %></dd>
+        <dt>Verified</dt><dd><%= payload.dig("consent", "trusted_form_verified") ? "yes" : "no" %></dd>
+        <dt>Landing page</dt><dd class="small"><%= payload.dig("consent", "landing_page_url") %></dd>
+        <dt>Checkbox</dt>
+        <dd>
+          <% if payload.dig("consent", "checkbox_captured") %>
+            <%= payload.dig("consent", "checkbox_ticked") ? "ticked" : "left unchecked" %>
+          <% else %>
+            <span class="muted">not captured</span>
+          <% end %>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Capture evidence</h3>
+      <dl class="kv small">
+        <% (payload["capture_evidence"] || {}).each do |key, value| %>
+          <dt><%= key.humanize %></dt>
+          <dd class="small"><%= value.is_a?(Hash) ? value.to_json : value %></dd>
+        <% end %>
+      </dl>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Coverage</h3>
+      <dl class="kv small">
+        <% coverage = payload["coverage"] || {} %>
+        <dt>Answered</dt><dd><%= coverage["layers_answered"] %> of <%= coverage["layers_expected"] %></dd>
+        <% %w[not_enabled_for_this_account not_applicable_to_this_lead unavailable_at_the_time
+              skipped_for_credits skipped_after_hard_stop].each do |key| %>
+          <% next if Array(coverage[key]).empty? %>
+          <dt><%= key.humanize %></dt>
+          <dd class="small"><%= Array(coverage[key]).join(", ") %></dd>
+        <% end %>
+      </dl>
+      <p class="small muted" style="margin-top:8px"><%= coverage["note"] %></p>
+    </div>
+  </div>
+</div>

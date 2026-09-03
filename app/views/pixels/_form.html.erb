@@ -1,0 +1,21 @@
+<%= form_with model: pixel, url: pixel.persisted? ? pixel_path(pixel) : pixels_path do |f| %>
+  <% if pixel.errors.any? %>
+    <div class="flash alert"><%= pixel.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <%= f.label :name, "Name" %>
+  <%= f.text_field :name, placeholder: "Solar savings quote funnel" %>
+
+  <%= f.label :allowed_origins, "Allowed origins - one per line" %>
+  <%= f.text_area :allowed_origins, value: pixel.allowed_origins.join("\n"),
+                  placeholder: "https://solar-savings.example.com\nhttp://localhost:3000" %>
+  <p class="small muted">
+    Scheme and host only. This is the allowlist that stops someone else's page
+    posting leads into your account, so an empty list accepts nothing.
+  </p>
+
+  <%= f.label :status, "Status" %>
+  <%= f.select :status, options_for_select(Pixel::STATUSES.map { |s| [s.titleize, s] }, pixel.status) %>
+
+  <%= f.submit pixel.persisted? ? "Save pixel" : "Create pixel", class: "btn", style: "margin-top:18px" %>
+<% end %>

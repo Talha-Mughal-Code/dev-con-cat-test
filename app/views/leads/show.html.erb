@@ -1,0 +1,198 @@
+<% content_for :title, @lead.full_name %>
+<div class="page-head">
+  <div>
+    <h1><%= @lead.full_name %></h1>
+    <p class="muted small">
+      <%= @lead.public_id %> · captured <%= time_short @lead.captured_at %>
+      <%= " · #{@lead.campaign}" if @lead.campaign %>
+      <%= " · via #{@lead.pixel.name}" if @lead.pixel %>
+    </p>
+  </div>
+  <div class="pill-row">
+    <% if allowed_to?(:reverify_lead, @lead) %>
+      <%= button_to "Re-verify", reverify_lead_path(@lead), class: "btn ghost small" %>
+    <% end %>
+    <%= link_to "Back to CRM", leads_path, class: "btn ghost small" %>
+  </div>
+</div>
+
+<div class="grid sidebar">
+  <div>
+    <% if @run %>
+      <div class="card">
+        <div class="verdict-hero <%= @run.verdict || 'none' %>">
+          <%= @run.verdict_label %>
+          <span class="sub">
+            <% if @run.completed? %>
+              risk <%= percent @run.risk_score %> ·
+              confidence <%= percent @run.confidence_score %> ·
+              <%= @run.verdict_code&.humanize %>
+            <% else %>
+              <%= @run.status.humanize %>
+            <% end %>
+          </span>
+        </div>
+
+        <% if @run.completed? %>
+          <div style="margin-top:14px"><%= risk_meter @run.risk_score %></div>
+          <h3 style="margin-top:16px">Why</h3>
+          <%= reason_items @run.reasons %>
+        <% end %>
+
+        <hr>
+        <dl class="kv small">
+          <dt>Layers answered</dt>
+          <dd>
+            <%= @run.coverage_answered %> of <%= @run.coverage_applicable %> expected
+            (<%= percent @run.coverage_ratio %>)
+          </dd>
+          <dt>Credits charged</dt>
+          <dd>
+            <%= @run.credits_charged %>
+            <% if @run.short_circuited? %>
+              <span class="muted">- wave 2 skipped after a hard stop</span>
+            <% end %>
+          </dd>
+          <dt>Policy</dt>
+          <dd><%= @run.consensus_policy.name %> v<%= @run.consensus_policy.version %></dd>
+          <dt>Attempt</dt><dd><%= @run.attempt %></dd>
+          <dt>Duration</dt><dd><%= @run.duration_ms ? "#{@run.duration_ms} ms" : "-" %></dd>
+        </dl>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Detection layers</h2>
+        <p class="muted small">
+          Every layer, including the ones that did not run. A layer that was not
+          enabled or did not apply is not a pass.
+        </p>
+        <div class="layers" id="layer-list">
+          <% @layer_results.each do |result| %>
+            <div class="layer-row <%= "silent" unless result.answered? %>" data-layer="<%= result.module_key %>">
+              <span class="lname"><%= result.display_name %></span>
+              <span class="ldetail"><%= result.summary %></span>
+              <span class="lcost">
+                <%= result.credits_charged.positive? ? "#{result.credits_charged} cr" : "" %>
+                <%= " · #{result.latency_ms}ms" if result.latency_ms %>
+                <%= " · +#{result.risk_contribution.round(2)}" if result.risk_contribution.positive? %>
+              </span>
+              <%= status_badge result.display_status %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="card"><div class="empty">This lead has not been verified yet.</div></div>
+    <% end %>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Activity</h2>
+      <ul class="reasons">
+        <% @events.each do |event| %>
+          <li class="<%= event.kind == "final_verdict" ? "signal" : "info" %>">
+            <span><%= event.headline %></span>
+            <span class="muted small nowrap"><%= event.occurred_at.strftime("%H:%M:%S") %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    <div class="card tight">
+      <h3>Submitted</h3>
+      <dl class="kv small">
+        <dt>Email</dt><dd><%= @lead.email %></dd>
+        <dt>Phone</dt><dd><%= @lead.phone %></dd>
+        <dt>Landing page</dt><dd class="small"><%= @lead.landing_page_url %></dd>
+        <dt>Submit IP</dt><dd><%= @lead.ip_address %></dd>
+        <% if @lead.capture_session&.visit_ip %>
+          <dt>Visit IP</dt>
+          <dd>
+            <%= @lead.capture_session.visit_ip %>
+            <% if @lead.capture_session.ip_consistent? == false %>
+              <span class="badge b-warn">changed</span>
+            <% end %>
+          </dd>
+        <% end %>
+        <dt>Form dwell</dt><dd><%= @lead.form_dwell_ms ? "#{(@lead.form_dwell_ms / 1000.0).round(1)}s" : "-" %></dd>
+        <dt>Consent box</dt>
+        <dd>
+          <% if @lead.consent_checkbox.nil? %>
+            <span class="muted">not captured</span>
+          <% else %>
+            <%= @lead.consent_checkbox ? "ticked" : "left unchecked" %>
+          <% end %>
+        </dd>
+        <dt>User agent</dt><dd class="small muted"><%= @lead.user_agent %></dd>
+      </dl>
+    </div>
+
+    <% if @certificate %>
+      <div class="card tight" style="margin-top:16px">
+        <h3>Consent certificate</h3>
+        <p class="small"><%= link_to @certificate.serial, certificate_path(@certificate.serial) %></p>
+        <% result = @certificate.verify %>
+        <p><span class="badge <%= result.valid? ? "b-pass" : "b-fail" %>"><%= result.status %></span></p>
+        <p class="small muted">
+          Issued <%= time_short @certificate.issued_at %> · chain #<%= @certificate.chain_index %>
+        </p>
+      </div>
+    <% end %>
+
+    <% if @duplicate_candidates.any? %>
+      <div class="card tight" style="margin-top:16px">
+        <h3>Matching CRM records</h3>
+        <p class="small muted">
+          Shown so a reviewer can judge a possible duplicate themselves rather
+          than trusting the flag.
+        </p>
+        <table class="small">
+          <tbody>
+            <% @duplicate_candidates.each do |record| %>
+              <tr>
+                <td><%= record.crm_id %><div class="muted"><%= record.full_name %></div></td>
+                <td class="small">
+                  <%= record.phone %>
+                  <div class="muted"><%= record.email %></div>
+                </td>
+                <td class="small muted"><%= time_short record.recorded_at %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <% if @previous_runs.any? %>
+      <div class="card tight" style="margin-top:16px">
+        <h3>Earlier runs</h3>
+        <table class="small">
+          <tbody>
+            <% @previous_runs.each do |run| %>
+              <tr>
+                <td>Attempt <%= run.attempt %></td>
+                <td><%= run_status_badge run %></td>
+                <td class="small muted"><%= time_short run.completed_at %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% if @run&.running? %>
+  <script>
+    // The CRM detail page subscribes to the same event stream the landing page
+    // does, so a lead still in flight fills in live rather than needing a
+    // refresh. Same endpoint, same cursor semantics.
+    (function () {
+      var source = new EventSource("<%= activity_lead_path(@lead) %>");
+      source.addEventListener("layer_result", function () { setTimeout(reload, 400); });
+      source.addEventListener("final_verdict", function () { setTimeout(reload, 600); });
+      function reload() { source.close(); window.location.reload(); }
+    })();
+  </script>
+<% end %>

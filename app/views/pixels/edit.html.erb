@@ -1,0 +1,3 @@
+<% content_for :title, "Edit #{@pixel.name}" %>
+<div class="page-head"><h1>Edit <%= @pixel.name %></h1></div>
+<div class="card"><%= render "form", pixel: @pixel %></div>

@@ -1,0 +1,10 @@
+<% content_for :title, "Not found" %>
+<div class="card">
+  <h1>Not found</h1>
+  <p class="muted">
+    That record does not exist, or it is not yours to see. Those two cases
+    deliberately look identical from here - telling them apart would reveal
+    which records exist in other accounts.
+  </p>
+  <p><%= link_to "Back to your leads", leads_path, class: "btn" %></p>
+</div>

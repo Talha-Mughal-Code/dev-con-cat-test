@@ -1,0 +1,19 @@
+<% content_for :title, "Accounts" %>
+<div class="page-head"><h1>Accounts</h1></div>
+<div class="card">
+  <table>
+    <thead><tr><th>Account</th><th>Plan</th><th>Status</th><th class="num">Credits left</th><th>Health</th></tr></thead>
+    <tbody>
+      <% @accounts.each do |account| %>
+        <tr>
+          <td><%= link_to account.company_name, platform_account_path(account.public_id) %>
+            <div class="muted small"><%= account.public_id %></div></td>
+          <td><%= account.plan %></td>
+          <td><span class="badge <%= account.past_due? ? "b-fail" : "b-pass" %>"><%= account.status %></span></td>
+          <td class="num"><%= number_with_delimiter account.credits_remaining %></td>
+          <td><%= health_badge account %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

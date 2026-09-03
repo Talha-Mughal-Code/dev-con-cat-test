@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= [yield(:title).presence, "Super Pixel platform"].compact.join(" · ") %></title>
+    <%= csrf_meta_tags %>
+    <%= stylesheet_link_tag "application" %>
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">Super&nbsp;Pixel <span class="muted small">platform</span></span>
+      <nav>
+        <%= nav_link "Overview", platform_root_path %>
+        <%= nav_link "Accounts", platform_accounts_path %>
+        <%= nav_link "Access log", platform_audit_logs_path %>
+      </nav>
+      <div class="who">
+        <span class="badge b-info">super_admin</span>
+        <span><%= current_user.name %></span>
+        <%= button_to "Sign out", logout_path, method: :delete, class: "btn ghost small" %>
+      </div>
+    </header>
+    <main class="wrap">
+      <%= render "shared/flash" %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

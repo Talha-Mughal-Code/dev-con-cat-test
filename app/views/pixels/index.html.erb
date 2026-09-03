@@ -1,0 +1,40 @@
+<% content_for :title, "Pixels" %>
+<div class="page-head">
+  <div>
+    <h1>Pixels</h1>
+    <p class="muted small">One snippet per funnel. A pixel is scoped to this account and to the layers it pays for.</p>
+  </div>
+  <% if allowed_to?(:create_pixel) %>
+    <%= link_to "New pixel", new_pixel_path, class: "btn" %>
+  <% end %>
+</div>
+
+<div class="card">
+  <% if @pixels.any? %>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Pixel</th><th>Id</th><th>Allowed origins</th><th class="num">Leads</th><th>Status</th></tr></thead>
+        <tbody>
+          <% @pixels.each do |pixel| %>
+            <tr>
+              <td><%= link_to pixel.name, pixel_path(pixel) %></td>
+              <td><code><%= pixel.public_id %></code></td>
+              <td class="small muted">
+                <% if pixel.allowed_origins.any? %>
+                  <%= pixel.allowed_origins.first(3).join(", ") %>
+                  <%= " +#{pixel.allowed_origins.size - 3} more" if pixel.allowed_origins.size > 3 %>
+                <% else %>
+                  <span class="badge b-fail">none - accepts nothing</span>
+                <% end %>
+              </td>
+              <td class="num"><%= @lead_counts[pixel.id] || 0 %></td>
+              <td><span class="badge b-<%= pixel.active? ? "pass" : "skip" %>"><%= pixel.status %></span></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty">No pixels yet.</div>
+  <% end %>
+</div>

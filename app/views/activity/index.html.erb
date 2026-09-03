@@ -1,0 +1,60 @@
+<% content_for :title, "Activity" %>
+<div class="page-head">
+  <div>
+    <h1>Activity</h1>
+    <p class="muted small">
+      Everything the pixel and the engine did, newest first. The same append-only
+      stream that powers the live landing-page panel.
+    </p>
+  </div>
+</div>
+
+<div class="card tight">
+  <div class="pill-row">
+    <%= link_to "All", activity_feed_path, class: "btn ghost small" %>
+    <% %w[lead_received layer_result final_verdict certificate_issued run_halted credits_low].each do |kind| %>
+      <%= link_to kind.humanize, activity_feed_path(kind: kind),
+                  class: "btn ghost small #{"on" if @kind == kind}" %>
+    <% end %>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <% if @events.any? %>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>When</th><th>Event</th><th>Detail</th><th>Lead</th></tr></thead>
+        <tbody>
+          <% @events.each do |event| %>
+            <tr>
+              <td class="small nowrap"><%= time_short event.occurred_at %></td>
+              <td><span class="badge b-info"><%= event.kind.humanize %></span></td>
+              <td class="small">
+                <%= event.headline %>
+                <% if event.payload["detail"].present? %>
+                  <div class="muted"><%= event.payload["detail"] %></div>
+                <% end %>
+              </td>
+              <td class="small">
+                <% if event.lead %>
+                  <%= link_to event.lead.public_id, lead_path(event.lead) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <% if @page > 1 %>
+        <%= link_to "Previous", activity_feed_path(kind: @kind, page: @page - 1), class: "btn ghost small" %>
+      <% end %>
+      <span class="muted small"><%= @total %> events</span>
+      <% if @page * @per_page < @total %>
+        <%= link_to "Next", activity_feed_path(kind: @kind, page: @page + 1), class: "btn ghost small" %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty">No activity recorded.</div>
+  <% end %>
+</div>

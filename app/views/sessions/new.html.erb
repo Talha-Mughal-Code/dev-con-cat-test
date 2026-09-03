@@ -1,0 +1,31 @@
+<% content_for :title, "Sign in" %>
+<div class="card">
+  <h1>Super Pixel</h1>
+  <p class="muted small">Consent and fraud verification for lead buyers.</p>
+
+  <%= form_with model: @user, url: session_path, scope: :user do |f| %>
+    <%= f.label :email, "Email" %>
+    <%= f.email_field :email, autofocus: true, autocomplete: "username" %>
+    <%= f.label :password, "Password" %>
+    <%= f.password_field :password, autocomplete: "current-password" %>
+    <%= f.submit "Sign in", class: "btn wide", style: "margin-top:18px" %>
+  <% end %>
+</div>
+
+<div class="card tight" style="margin-top:16px">
+  <h3>Seeded accounts</h3>
+  <p class="small muted">
+    Every seeded user shares the password <code>super-pixel-demo-2026</code>.
+    The <code>placeholder_password</code> values in <code>mock-data/users.json</code>
+    are deliberately ignored - that file says not to ship them.
+  </p>
+  <table class="small">
+    <tbody>
+      <tr><td>admin@catchingconsent.example</td><td class="muted">platform operator - sees every account</td></tr>
+      <tr><td>dana@solarpro.example</td><td class="muted">account admin, SolarPro</td></tr>
+      <tr><td>luis@solarpro.example</td><td class="muted">member, SolarPro (read-only)</td></tr>
+      <tr><td>priya@medicareedge.example</td><td class="muted">account admin, Medicare Edge</td></tr>
+      <tr><td>chris@autoinsure.example</td><td class="muted">account admin, AutoInsure (past due, nearly dry)</td></tr>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,109 @@
+<% content_for :title, "Consensus policy" %>
+<div class="page-head">
+  <div>
+    <h1>Consensus policy</h1>
+    <p class="muted small">
+      <% if @inherited %>
+        Inheriting the <strong>platform default</strong>. Saving any change forks
+        it into a policy owned by this account, so your tuning never affects
+        anyone else - and until then, platform-level corrections keep reaching you.
+      <% else %>
+        <%= @policy.name %> v<%= @policy.version %>, owned by this account.
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<%= form_with url: policy_path, method: :patch, scope: :policy do |f| %>
+  <div class="grid two">
+    <div class="card">
+      <h2>Thresholds</h2>
+      <p class="muted small">
+        Every layer's doubt is combined with noisy-OR
+        (<code>risk = 1 - Π(1 - contribution)</code>), then compared to these.
+      </p>
+      <%= f.fields_for :thresholds do |t| %>
+        <%= t.label :accept_below, "Accept below this risk" %>
+        <%= t.number_field :accept_below, value: @effective[:thresholds]["accept_below"],
+                           step: 0.01, min: 0, max: 1 %>
+        <p class="small muted">
+          Default 0.20, set just above the largest advisory-only signal so a soft
+          duplicate alone cannot deny a clean lead.
+        </p>
+
+        <%= t.label :reject_at_or_above, "Reject at or above this risk" %>
+        <%= t.number_field :reject_at_or_above, value: @effective[:thresholds]["reject_at_or_above"],
+                           step: 0.01, min: 0, max: 1 %>
+        <p class="small muted">
+          Default 0.60. Below it, a lead is held for human review rather than
+          discarded - a second look costs a minute, a lost good lead costs money.
+        </p>
+
+        <%= t.label :coverage_floor, "Minimum coverage for an accept" %>
+        <%= t.number_field :coverage_floor, value: @effective[:thresholds]["coverage_floor"],
+                           step: 0.05, min: 0, max: 1 %>
+        <p class="small muted">
+          Default 0.50. Below this share of expected layers answering, the best
+          available verdict is REVIEW - we will not vouch for a lead we barely
+          checked.
+        </p>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <h2>Hard stops</h2>
+      <p class="muted small">
+        Conditions where no amount of countervailing evidence makes the lead
+        purchasable. Which are armed is data; the list itself is code, because
+        each encodes a legal or economic claim that should be reviewable.
+      </p>
+      <% @hard_stops.each do |definition| %>
+        <div class="check">
+          <%= check_box_tag "policy[hard_stops][]", definition.code,
+                            @effective[:armed_hard_stops].include?(definition.code),
+                            id: "hs_#{definition.code}" %>
+          <label for="hs_<%= definition.code %>" style="margin:0">
+            <strong><%= definition.headline %></strong>
+            <span class="muted">· <%= definition.module_key %></span>
+            <div class="small muted" style="margin-top:3px"><%= definition.rationale %></div>
+          </label>
+        </div>
+      <% end %>
+      <p class="small muted">
+        Disarming one does not make it free: it falls back to a 0.65 weight,
+        which still rejects on its own but is now combinable with, and
+        overridable by, other evidence.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Signal weights</h2>
+    <p class="muted small">
+      What each observation contributes to the risk score. Within one layer the
+      maximum applies, not the sum - a layer is one voice and gets one vote at
+      its strongest objection.
+    </p>
+    <div class="grid three">
+      <% @effective[:weights].each do |module_key, conditions| %>
+        <% next if conditions.blank? %>
+        <div>
+          <h3><%= module_key.humanize %></h3>
+          <% conditions.each do |condition, value| %>
+            <label style="margin-top:8px"><%= condition.humanize %></label>
+            <%= number_field_tag "policy[weights][#{module_key}][#{condition}]", value,
+                                 step: 0.01, min: 0, max: 1 %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if allowed_to?(:manage_policy) %>
+    <p style="margin-top:16px"><%= f.submit "Save policy", class: "btn" %></p>
+  <% else %>
+    <p class="small muted" style="margin-top:16px">
+      Read-only: only an account admin can change the policy.
+    </p>
+  <% end %>
+<% end %>

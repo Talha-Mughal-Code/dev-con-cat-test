@@ -1,0 +1,95 @@
+<% content_for :title, "Dashboard" %>
+<div class="page-head">
+  <div>
+    <h1><%= @account.company_name %></h1>
+    <p class="muted small">
+      <%= @account.plan.titleize %> plan ·
+      <%= pluralize @pixels.size, "pixel" %> ·
+      <%= @account.enabled_module_costs.size %> of <%= DetectionModule.count %> detection layers enabled
+    </p>
+  </div>
+  <div class="pill-row">
+    <%= health_badge @account %>
+    <% if @account.past_due? %><span class="badge b-fail">past due</span><% end %>
+  </div>
+</div>
+
+<div class="grid four">
+  <div class="stat"><div class="n"><%= number_with_delimiter @total_leads %></div><div class="k">Leads</div></div>
+  <div class="stat"><div class="n" style="color:var(--pass)"><%= @verdict_counts["accept"] || 0 %></div><div class="k">Accepted</div></div>
+  <div class="stat"><div class="n" style="color:var(--warn)"><%= @verdict_counts["review"] || 0 %></div><div class="k">Need review</div></div>
+  <div class="stat"><div class="n" style="color:var(--fail)"><%= @verdict_counts["reject"] || 0 %></div><div class="k">Rejected</div></div>
+</div>
+
+<div class="grid sidebar" style="margin-top:16px">
+  <div class="card">
+    <h2>Recent leads</h2>
+    <% if @recent_leads.any? %>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Lead</th><th>Captured</th><th>Verdict</th><th>Reason</th></tr></thead>
+          <tbody>
+            <% @recent_leads.each do |lead| %>
+              <tr>
+                <td><%= link_to lead.full_name, lead_path(lead) %><div class="muted small"><%= lead.public_id %></div></td>
+                <td class="small"><%= time_short lead.captured_at %></td>
+                <td><%= run_status_badge lead.current_verification_run %></td>
+                <td class="small muted"><%= lead.current_verification_run&.primary_reason %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty">No leads yet. Try the <%= link_to "demo funnel", demo_path %>.</div>
+    <% end %>
+  </div>
+
+  <div>
+    <div class="card tight">
+      <h3>Credits</h3>
+      <div class="n" style="font-size:26px;font-weight:700">
+        <%= number_with_delimiter @account.credits_remaining %>
+      </div>
+      <div class="muted small" style="margin-bottom:8px">
+        of <%= number_with_delimiter @account.monthly_credit_allowance %> this cycle
+      </div>
+      <div class="meter">
+        <span style="width: <%= ((@account.credits_consumed.to_f / [@account.monthly_credit_allowance, 1].max) * 100).clamp(0, 100) %>%"></span>
+      </div>
+      <dl class="kv small" style="margin-top:12px">
+        <dt>Burn rate</dt>
+        <dd><%= number_with_delimiter @account.daily_burn_rate %>/day <span class="muted">(<%= @account.burn_rate_basis %>)</span></dd>
+        <dt>Runs dry in</dt><dd><%= days_label @account.days_until_dry %></dd>
+        <dt>Cycle ends</dt><dd><%= @account.cycle_end.strftime("%d %b %Y") %></dd>
+      </dl>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Where credits went</h3>
+      <% if @credit_spend.any? %>
+        <table class="small">
+          <tbody>
+            <% @credit_spend.each do |module_key, spent| %>
+              <tr><td><%= module_key&.humanize || "other" %></td><td class="num"><%= number_with_delimiter spent %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="muted small">No itemised spend yet this cycle.</p>
+      <% end %>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Latest activity</h3>
+      <ul class="reasons">
+        <% @recent_activity.each do |event| %>
+          <li class="info">
+            <span><%= event.headline %></span>
+            <span class="muted small nowrap"><%= time_short event.occurred_at %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+</div>

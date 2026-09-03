@@ -1,0 +1,101 @@
+<% content_for :title, "Leads" %>
+<div class="page-head">
+  <div>
+    <h1>CRM</h1>
+    <p class="muted small"><%= pluralize @total, "lead" %> in <%= current_account.company_name %></p>
+  </div>
+  <div class="pill-row">
+    <%= link_to "All", leads_path, class: "btn ghost small" %>
+    <%= link_to "Needs review", leads_path(flagged: 1), class: "btn ghost small" %>
+    <%= link_to "Accepted", leads_path(verdict: "accept"), class: "btn ghost small" %>
+    <%= link_to "Rejected", leads_path(verdict: "reject"), class: "btn ghost small" %>
+  </div>
+</div>
+
+<div class="card tight">
+  <%= form_with url: leads_path, method: :get do |f| %>
+    <div class="filters">
+      <div class="f grow">
+        <%= f.label :q, "Search name, email, phone or lead id" %>
+        <%= f.text_field :q, value: @filters[:q], placeholder: "maria, +1310..., L-1001" %>
+      </div>
+      <div class="f">
+        <%= f.label :verdict, "Verdict" %>
+        <%= f.select :verdict, options_for_select([["Any", ""]] + VerificationRun::VERDICTS.map { |v| [v.titleize, v] }, @filters[:verdict]) %>
+      </div>
+      <div class="f">
+        <%= f.label :status, "Run status" %>
+        <%= f.select :status, options_for_select([["Any", ""]] + VerificationRun::STATUSES.map { |s| [s.humanize, s] }, @filters[:status]) %>
+      </div>
+      <div class="f">
+        <%= f.label :pixel, "Pixel" %>
+        <%= f.select :pixel, options_for_select([["Any", ""]] + @pixels.map { |p| [p.name, p.public_id] }, @filters[:pixel]) %>
+      </div>
+      <div class="f"><%= f.label :from, "From" %><%= f.date_field :from, value: @filters[:from] %></div>
+      <div class="f"><%= f.label :to, "To" %><%= f.date_field :to, value: @filters[:to] %></div>
+      <div><%= f.submit "Filter", class: "btn" %></div>
+    </div>
+  <% end %>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <% if @leads.any? %>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Lead</th><th>Contact</th><th>Captured</th><th>Verdict</th>
+            <th class="num">Risk</th><th>Primary reason</th><th class="num">Credits</th><th>Certificate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @leads.each do |lead| %>
+            <% run = lead.current_verification_run %>
+            <tr>
+              <td>
+                <%= link_to lead.full_name, lead_path(lead) %>
+                <div class="muted small"><%= lead.public_id %><%= " · #{lead.campaign}" if lead.campaign %></div>
+              </td>
+              <td class="small">
+                <%= lead.email %>
+                <div class="muted"><%= lead.phone %></div>
+              </td>
+              <td class="small"><%= time_short lead.captured_at %></td>
+              <td><%= run_status_badge run %></td>
+              <td class="num small">
+                <% if run&.risk_score %>
+                  <%= percent run.risk_score %>
+                <% else %>
+                  -
+                <% end %>
+              </td>
+              <td class="small muted"><%= truncate run&.primary_reason, length: 90 %></td>
+              <td class="num small"><%= run&.credits_charged || 0 %></td>
+              <td class="small">
+                <% if (certificate = run&.consent_certificate) %>
+                  <%= link_to certificate.serial.split("-").last, certificate_path(certificate.serial) %>
+                <% else %>
+                  <span class="muted">-</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      <% if @page > 1 %>
+        <%= link_to "Previous", leads_path(@filters.merge(page: @page - 1)), class: "btn ghost small" %>
+      <% end %>
+      <span class="muted small">
+        Showing <%= (@page - 1) * @per_page + 1 %>-<%= [@page * @per_page, @total].min %> of <%= @total %>
+      </span>
+      <% if @page * @per_page < @total %>
+        <%= link_to "Next", leads_path(@filters.merge(page: @page + 1)), class: "btn ghost small" %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty">No leads match those filters.</div>
+  <% end %>
+</div>

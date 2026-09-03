@@ -1,0 +1,117 @@
+<% content_for :title, @account.company_name %>
+<div class="page-head">
+  <div>
+    <h1><%= @account.company_name %></h1>
+    <p class="muted small">
+      <%= @account.public_id %> · <%= @account.plan %> plan · <%= @account.billing_contact %>
+    </p>
+  </div>
+  <div class="pill-row">
+    <%= health_badge @account %>
+    <% if @account.past_due? %><span class="badge b-fail">past due</span><% end %>
+  </div>
+</div>
+
+<p class="small muted">
+  This read is recorded in the <%= link_to "access log", platform_audit_logs_path %>.
+  A platform operator can read every account and write to none - there is no
+  capability anywhere that grants writing tenant data.
+</p>
+
+<div class="grid four" style="margin-top:12px">
+  <div class="stat"><div class="n"><%= @stats[:leads] %></div><div class="k">Leads</div></div>
+  <div class="stat"><div class="n"><%= @stats[:certificates] %></div><div class="k">Certificates</div></div>
+  <div class="stat"><div class="n"><%= number_with_delimiter @account.credits_remaining %></div><div class="k">Credits left</div></div>
+  <div class="stat"><div class="n"><%= days_label @account.days_until_dry %></div><div class="k">Runs dry in</div></div>
+</div>
+
+<div class="grid sidebar" style="margin-top:16px">
+  <div>
+    <div class="card">
+      <h2>Recent runs</h2>
+      <table>
+        <thead><tr><th>Lead</th><th>Verdict</th><th>Reason</th><th class="num">Credits</th><th>When</th></tr></thead>
+        <tbody>
+          <% @recent_runs.each do |run| %>
+            <tr>
+              <td class="small"><%= run.lead.public_id %></td>
+              <td><%= run_status_badge run %></td>
+              <td class="small muted"><%= truncate run.verdict_code&.humanize, length: 40 %></td>
+              <td class="num"><%= run.credits_charged %></td>
+              <td class="small"><%= time_short run.created_at %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Credit ledger</h2>
+      <p class="muted small">
+        Append-only and immutable at the database level. This is the billing
+        source of truth; the cached counter on the account is only a sum of it.
+      </p>
+      <table>
+        <thead><tr><th>When</th><th>Type</th><th>Layer</th><th class="num">Amount</th><th class="num">Balance</th></tr></thead>
+        <tbody>
+          <% @ledger.each do |entry| %>
+            <tr>
+              <td class="small nowrap"><%= time_short entry.occurred_at %></td>
+              <td class="small"><%= entry.entry_type.humanize %></td>
+              <td class="small"><%= entry.module_key %></td>
+              <td class="num" style="color: <%= entry.consumed? ? "var(--fail)" : "var(--pass)" %>">
+                <%= entry.amount %>
+              </td>
+              <td class="num"><%= number_with_delimiter entry.balance_after %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card tight">
+      <h3>Reconciliation</h3>
+      <dl class="kv small">
+        <dt>Cached counter</dt><dd><%= number_with_delimiter @reconciliation[:cached] %></dd>
+        <dt>Ledger sum</dt><dd><%= number_with_delimiter @reconciliation[:ledger] %></dd>
+        <dt>Drift</dt>
+        <dd>
+          <span class="badge <%= @reconciliation[:drift].zero? ? "b-pass" : "b-fail" %>">
+            <%= @reconciliation[:drift] %>
+          </span>
+        </dd>
+      </dl>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Subscribed layers</h3>
+      <div class="layers">
+        <% @all_modules.each do |mod| %>
+          <% cost = @modules[mod.key] %>
+          <div class="layer-row <%= "silent" if cost.nil? %>">
+            <span class="lname"><%= mod.name %></span>
+            <span class="ldetail small"></span>
+            <span class="lcost"><%= cost ? "#{cost} cr" : "" %></span>
+            <%= status_badge cost ? "pass" : "not_enabled" %>
+          </div>
+        <% end %>
+      </div>
+      <p class="small muted" style="margin-top:10px">
+        <%= @modules.values.sum %> credits for a full stack on one lead.
+      </p>
+    </div>
+
+    <div class="card tight" style="margin-top:16px">
+      <h3>Policy</h3>
+      <dl class="kv small">
+        <dt>Name</dt><dd><%= @policy.name %> v<%= @policy.version %></dd>
+        <dt>Scope</dt><dd><%= @policy.platform_default? ? "platform default (inherited)" : "account override" %></dd>
+        <dt>Accept below</dt><dd><%= @policy.accept_below %></dd>
+        <dt>Reject at</dt><dd><%= @policy.reject_at_or_above %></dd>
+        <dt>Armed hard stops</dt><dd class="small"><%= @policy.enabled_hard_stops.join(", ") %></dd>
+      </dl>
+    </div>
+  </div>
+</div>

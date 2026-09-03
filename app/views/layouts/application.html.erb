@@ -1,22 +1,37 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
-    <title><%= content_for(:title) || "Super Pixel" %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= [yield(:title).presence, "Super Pixel"].compact.join(" · ") %></title>
     <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
-
-    <%= yield :head %>
-
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application" %>
   </head>
-
   <body>
-    <%= yield %>
+    <header class="topbar">
+      <span class="brand">Super&nbsp;Pixel</span>
+      <nav>
+        <%= nav_link "Dashboard", dashboard_path %>
+        <%= nav_link "Leads", leads_path %>
+        <%= nav_link "Pixels", pixels_path %>
+        <%= nav_link "Activity", activity_feed_path %>
+        <%= nav_link "Policy", policy_path if allowed_to?(:view_policy) %>
+        <%= nav_link "Demo funnel", demo_path %>
+      </nav>
+      <div class="who">
+        <% if current_account %>
+          <span><%= current_account.company_name %></span>
+          <span class="badge <%= credit_badge_class(current_account) %>">
+            <%= number_with_delimiter current_account.credits_remaining %> cr
+          </span>
+        <% end %>
+        <span><%= current_user.name %> · <%= current_user.display_role %></span>
+        <%= button_to "Sign out", logout_path, method: :delete, class: "btn ghost small" %>
+      </div>
+    </header>
+    <main class="wrap">
+      <%= render "shared/flash" %>
+      <%= yield %>
+    </main>
   </body>
 </html>

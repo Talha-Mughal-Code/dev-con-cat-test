@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Starts everything the demo needs: the web server and the job worker.
+#
+# Two processes because layer verification runs as durable background jobs
+# (Solid Queue), and the whole point of the real-time pixel is that the worker
+# and the web server are genuinely separate - the activity stream crosses that
+# boundary through the database rather than through process memory.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ ! -f storage/development.sqlite3 ]; then
+  echo "==> No database yet; preparing and seeding"
+  bin/rails db:prepare
+  bin/rails db:seed
+fi
+
+echo "==> Puma on http://localhost:3000  (demo funnel: http://localhost:3000/demo)"
+echo "==> Solid Queue worker"
+echo
+
+pids=()
+cleanup() {
+  trap - INT TERM EXIT
+  for pid in "${pids[@]:-}"; do kill "$pid" 2>/dev/null || true; done
+  wait 2>/dev/null || true
+}
+trap cleanup INT TERM EXIT
+
+bin/rails server --port "${PORT:-3000}" & pids+=($!)
+bin/jobs & pids+=($!)
+
+wait -n
+cleanup

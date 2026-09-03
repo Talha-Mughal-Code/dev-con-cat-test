@@ -1,0 +1,149 @@
+<% content_for :title, "Platform overview" %>
+<div class="page-head">
+  <div>
+    <h1>Platform overview</h1>
+    <p class="muted small">
+      Every account, sorted by urgency rather than name - the point of this
+      screen is that the account about to run dry is at the top without anyone
+      having to look for it.
+    </p>
+  </div>
+</div>
+
+<% if @needs_attention.any? %>
+  <div class="card" style="border-color: rgba(239,68,68,.4); margin-bottom:16px">
+    <h2 style="color:var(--fail)">Needs attention</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Account</th><th>Why</th><th class="num">Credits left</th><th class="num">Burn/day</th><th>Runs dry</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% @needs_attention.sort_by(&:days_until_dry).each do |account| %>
+            <tr>
+              <td><%= link_to account.company_name, platform_account_path(account.public_id) %>
+                <div class="muted small"><%= account.public_id %> · <%= account.plan %></div></td>
+              <td>
+                <div class="pill-row">
+                  <% if account.past_due? %><span class="badge b-fail">past due</span><% end %>
+                  <%= health_badge account %>
+                </div>
+              </td>
+              <td class="num"><%= number_with_delimiter account.credits_remaining %></td>
+              <td class="num"><%= number_with_delimiter account.daily_burn_rate %></td>
+              <td><strong style="color:var(--fail)"><%= days_label account.days_until_dry %></strong></td>
+              <td class="small muted"><%= account.billing_contact %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted" style="margin-top:10px">
+      An account that reaches zero mid-verification does not get a guessed
+      verdict. The run halts with no verdict at all and no certificate: accepting
+      would vouch for a lead we did not finish checking, and rejecting would
+      destroy a possibly-good lead over a billing problem.
+      <%= @halted %> <%= "run".pluralize(@halted) %> halted this way so far.
+    </p>
+  </div>
+<% end %>
+
+<div class="grid four">
+  <div class="stat"><div class="n"><%= @totals[:accounts] %></div><div class="k">Accounts</div></div>
+  <div class="stat"><div class="n"><%= number_with_delimiter @totals[:leads] %></div><div class="k">Leads</div></div>
+  <div class="stat"><div class="n"><%= number_with_delimiter @totals[:certificates] %></div><div class="k">Certificates</div></div>
+  <div class="stat">
+    <div class="n"><%= number_with_delimiter @totals[:credits_consumed] %></div>
+    <div class="k">Credits used of <%= number_with_delimiter @totals[:credits_allowed] %></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>All accounts</h2>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Account</th><th>Plan</th><th>Status</th><th>Health</th>
+          <th class="num">Allowance</th><th class="num">Used</th><th class="num">Left</th>
+          <th class="num">Burn/day</th><th>Runs dry</th>
+          <th class="num">Layers</th><th class="num">Cost/lead</th><th class="num">Leads</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @accounts_by_urgency.each do |account| %>
+          <% stats = @account_stats[account] %>
+          <tr>
+            <td><%= link_to account.company_name, platform_account_path(account.public_id) %>
+              <div class="muted small"><%= account.public_id %></div></td>
+            <td class="small"><%= account.plan %></td>
+            <td><span class="badge <%= account.past_due? ? "b-fail" : "b-pass" %>"><%= account.status %></span></td>
+            <td><%= health_badge account %></td>
+            <td class="num"><%= number_with_delimiter account.monthly_credit_allowance %></td>
+            <td class="num"><%= number_with_delimiter account.credits_consumed %></td>
+            <td class="num"><%= number_with_delimiter account.credits_remaining %></td>
+            <td class="num"><%= number_with_delimiter account.daily_burn_rate %>
+              <div class="muted small"><%= account.burn_rate_basis %></div></td>
+            <td class="small"><%= days_label account.days_until_dry %></td>
+            <td class="num"><%= stats[:modules_enabled] %></td>
+            <td class="num"><%= stats[:full_stack_cost] %></td>
+            <td class="num"><%= stats[:leads] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:10px">
+    "Burn/day" is measured from the credit ledger once there are three days of
+    history, and falls back to the account's modelled rate before that - shown
+    as <em>modelled</em> rather than presented as a measurement.
+  </p>
+</div>
+
+<div class="grid two" style="margin-top:16px">
+  <div class="card">
+    <h2>Verdicts across the platform</h2>
+    <table>
+      <tbody>
+        <% VerificationRun::VERDICTS.each do |verdict| %>
+          <tr>
+            <td><%= verdict_badge verdict %></td>
+            <td class="num"><%= @verdict_counts[verdict] || 0 %></td>
+          </tr>
+        <% end %>
+        <tr><td><span class="badge b-unavailable">halted</span></td><td class="num"><%= @halted %></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Credit spend by layer</h2>
+    <% if @spend_by_module.any? %>
+      <table>
+        <tbody>
+          <% @spend_by_module.each do |module_key, spent| %>
+            <tr><td><%= module_key&.humanize || "carried into cycle" %></td><td class="num"><%= number_with_delimiter spent %></td></tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <div class="empty">No itemised spend yet.</div>
+    <% end %>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>Recent platform activity</h2>
+  <table>
+    <tbody>
+      <% @recent_events.each do |event| %>
+        <tr>
+          <td class="small nowrap"><%= time_short event.occurred_at %></td>
+          <td class="small"><%= event.account.public_id %></td>
+          <td><span class="badge b-info"><%= event.kind.humanize %></span></td>
+          <td class="small"><%= event.headline %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

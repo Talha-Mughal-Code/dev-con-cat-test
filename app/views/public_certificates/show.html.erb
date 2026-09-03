@@ -1,0 +1,62 @@
+<% content_for :title, "Verify #{@certificate.serial}" %>
+<div class="card">
+  <h1>Certificate verification</h1>
+  <p class="muted small"><code><%= @certificate.serial %></code></p>
+
+  <div class="verdict-hero <%= @result.valid? ? "accept" : "reject" %>" style="margin:16px 0">
+    <%= @result.status.upcase %>
+    <span class="sub">
+      <% if @result.valid? %>
+        This certificate is authentic and unaltered.
+      <% elsif @result.revoked? %>
+        Authentic, but revoked by the issuer.
+      <% else %>
+        This document does not match what was issued.
+      <% end %>
+    </span>
+  </div>
+
+  <table>
+    <tbody>
+      <tr><td>Payload digest</td><td><span class="badge <%= @result.digest_ok ? "b-pass" : "b-fail" %>"><%= @result.digest_ok ? "matches" : "altered" %></span></td></tr>
+      <tr><td>Signature</td><td><span class="badge <%= @result.signature_ok ? "b-pass" : "b-fail" %>"><%= @result.signature_ok ? "valid" : "invalid" %></span></td></tr>
+      <tr><td>Chain position</td><td><span class="badge <%= @result.chain_ok ? "b-pass" : "b-fail" %>"><%= @result.chain_ok ? "intact" : "broken" %></span></td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h2>What this certificate attests</h2>
+  <dl class="kv small">
+    <dt>Issued to</dt><dd><%= @summary[:issued_to] %></dd>
+    <dt>Issued at</dt><dd><%= @summary[:issued_at] %></dd>
+    <dt>Lead captured</dt><dd><%= @summary[:lead_captured_at] %></dd>
+    <dt>Landing page</dt><dd><%= @summary[:landing_page] %></dd>
+    <dt>Consent record retained</dt><dd><%= @summary[:consent_certificate_retained] ? "yes" : "no" %></dd>
+    <dt>Consent verified</dt><dd><%= @summary[:consent_verified] ? "yes" : "no" %></dd>
+    <dt>Verdict</dt><dd><%= verdict_badge @summary[:verdict] %> <%= @summary[:verdict_reason] %></dd>
+    <dt>Digest</dt><dd class="small"><code><%= @summary[:digest] %></code></dd>
+    <dt>Algorithm</dt><dd><%= @summary[:algorithm] %> · key <code><%= @summary[:key_id] %></code></dd>
+  </dl>
+
+  <h2 style="margin-top:20px">Layers run</h2>
+  <div class="layers">
+    <% @summary[:layers].each do |layer| %>
+      <div class="layer-row <%= "silent" unless layer[:state] == "completed" %>">
+        <span class="lname"><%= layer[:name] %></span>
+        <span class="ldetail"></span>
+        <span class="lcost"></span>
+        <%= status_badge layer[:signal] || layer[:state] %>
+      </div>
+    <% end %>
+  </div>
+
+  <p class="small muted" style="margin-top:16px">
+    The consumer's name, email and phone are deliberately not shown here.
+    Proving that a document is authentic should not require disclosing its
+    contents to anyone holding a serial number - the owning account can see the
+    full record after signing in. The signing public key is published at
+    <%= link_to "/.well-known/super-pixel-certificate-key", "/.well-known/super-pixel-certificate-key" %>
+    so this signature can also be checked offline, without trusting this page.
+  </p>
+</div>

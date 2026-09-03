@@ -1,0 +1,3 @@
+<% flash.each do |kind, message| %>
+  <div class="flash <%= kind == "alert" ? "alert" : "notice" %>"><%= message %></div>
+<% end %>
